@@ -1,7 +1,8 @@
-FROM php:8.2-fini-nginx
+FROM php:8.2-fpm
 
-# Instalar extensiones necesarias de PHP para Laravel
+# Instalar Nginx y extensiones necesarias de PHP para Laravel
 RUN apt-get update && apt-get install -y \
+    nginx \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -12,6 +13,9 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql gd
+
+# Configurar Nginx para Laravel
+COPY .docker/nginx.conf /etc/nginx/sites-available/default
 
 # Copiar el código del proyecto al contenedor
 COPY . /var/www/html
@@ -27,4 +31,5 @@ RUN composer install --no-dev --optimize-autoloader
 # Optimizar caché de Laravel
 RUN php artisan optimize
 
-EXPOSE 80
+# Comando para encender tanto PHP-FPM como Nginx al mismo tiempo
+CMD service nginx start && php-fpm
