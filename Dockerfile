@@ -31,5 +31,4 @@ RUN composer install --no-dev --optimize-autoloader
 # Optimizar caché de Laravel
 RUN php artisan optimize
 
-# Comando para encender tanto PHP-FPM como Nginx al mismo tiempo
-CMD service nginx start && php-fpm
+CMD php artisan migrate --force && service nginx start && php-fpm
