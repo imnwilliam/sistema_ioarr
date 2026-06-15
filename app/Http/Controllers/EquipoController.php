@@ -11,14 +11,12 @@ class EquipoController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Iniciamos la consulta base
         $query = DB::table('equipos')
             ->leftJoin('inversiones', 'equipos.id_inversion', '=', 'inversiones.id')
             ->leftJoin('areas_upss', 'equipos.id_upss', '=', 'areas_upss.id')
             ->select('equipos.*', 'inversiones.cui', 'areas_upss.nombre_upss')
             ->whereNull('equipos.deleted_at');
 
-        // 2. ¡NUEVO! Aplicamos filtros si el usuario los seleccionó
         if ($request->filled('filtro_inversion')) {
             $query->where('equipos.id_inversion', $request->filtro_inversion);
         }
@@ -27,8 +25,6 @@ class EquipoController extends Controller
         }
 
         $equipos = $query->orderBy('equipos.id', 'desc')->get();
-
-        // 3. Cargamos los catálogos para los selectores
         $inversiones = DB::table('inversiones')->where('estado_pmi', 'Activo')->get();
         $areas = DB::table('areas_upss')->get();
         $tipos = DB::table('tipos_equipo')->get();
@@ -44,44 +40,76 @@ class EquipoController extends Controller
         $equipo->expediente = $request->expediente;
         $equipo->nombre_equipo = $request->nombre_equipo;
         $equipo->tipo_equipo = $request->tipo_equipo;
+        $equipo->servicio = $request->servicio; 
         $equipo->ambiente = $request->ambiente;
+        $equipo->estado_situacional = $request->estado_situacional; // NUEVO CAMPO
         $equipo->cantidad = $request->cantidad;
         $equipo->precio_unitario = $request->precio_unitario;
         $equipo->precio_total = $request->cantidad * $request->precio_unitario;
         
-        // ¡NUEVO! Guardar archivo PDF si existe
-        if ($request->hasFile('archivo_evidencia')) {
-            $ruta = $request->file('archivo_evidencia')->store('evidencias', 'local');
-            $equipo->archivo_evidencia = $ruta;
+        $archivos = [];
+        if ($request->hasFile('archivos_evidencia')) {
+            foreach ($request->file('archivos_evidencia') as $file) {
+                $archivos[] = $file->store('evidencias', 'public');
+            }
         }
-
+        $equipo->archivo_evidencia = json_encode($archivos);
+        
         $equipo->save();
 
-        return redirect('/equipos')->with('success', 'Equipo y evidencia registrados correctamente.');
+        return redirect('/equipos')->with('success', 'Equipo y evidencias registrados correctamente.');
     }
 
     public function update(Request $request, $id)
     {
+        $equipoExistente = DB::table('equipos')->where('id', $id)->first();
+        
+        $archivosExistentes = json_decode($equipoExistente->archivo_evidencia, true);
+        if (!$archivosExistentes && !empty($equipoExistente->archivo_evidencia)) {
+            $archivosExistentes = [$equipoExistente->archivo_evidencia];
+        }
+        $archivosExistentes = $archivosExistentes ?? [];
+
+        if ($request->hasFile('archivos_evidencia')) {
+            foreach ($request->file('archivos_evidencia') as $file) {
+                $archivosExistentes[] = $file->store('evidencias', 'public');
+            }
+        }
+
         $datos = [
             'id_inversion' => $request->id_inversion,
             'id_upss' => $request->id_upss,
             'expediente' => $request->expediente,
             'nombre_equipo' => $request->nombre_equipo,
             'tipo_equipo' => $request->tipo_equipo,
+            'servicio' => $request->servicio, 
             'ambiente' => $request->ambiente,
+            'estado_situacional' => $request->estado_situacional, // NUEVO CAMPO
             'cantidad' => $request->cantidad,
             'precio_unitario' => $request->precio_unitario,
             'precio_total' => $request->cantidad * $request->precio_unitario,
+            'archivo_evidencia' => json_encode($archivosExistentes)
         ];
-
-        // ¡NUEVO! Actualizar archivo PDF si se sube uno nuevo
-        if ($request->hasFile('archivo_evidencia')) {
-            $datos['archivo_evidencia'] = $request->file('archivo_evidencia')->store('evidencias', 'local');
-        }
 
         DB::table('equipos')->where('id', $id)->update($datos);
 
         return redirect('/equipos')->with('success', 'Equipo actualizado correctamente.');
+    }
+
+    public function destroyArchivo($id, $index)
+    {
+        $equipo = DB::table('equipos')->where('id', $id)->first();
+        $archivos = json_decode($equipo->archivo_evidencia, true) ?? [];
+
+        if(isset($archivos[$index])) {
+            Storage::disk('public')->delete($archivos[$index]); 
+            unset($archivos[$index]); 
+            $archivos = array_values($archivos); 
+            
+            DB::table('equipos')->where('id', $id)->update(['archivo_evidencia' => json_encode($archivos)]);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     public function destroy($id)
@@ -90,7 +118,6 @@ class EquipoController extends Controller
         return redirect('/equipos')->with('success', 'Equipo eliminado del sistema.');
     }
 
-    // ¡NUEVO! Función para descargar el documento de forma segura
     public function descargarPDF($id)
     {
         $equipo = DB::table('equipos')->where('id', $id)->first();
@@ -107,19 +134,19 @@ class EquipoController extends Controller
         $equipos = DB::table('equipos')
             ->leftJoin('inversiones', 'equipos.id_inversion', '=', 'inversiones.id')
             ->leftJoin('areas_upss', 'equipos.id_upss', '=', 'areas_upss.id')
-            ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
+            ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.servicio', 'equipos.ambiente', 'equipos.estado_situacional', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
             ->whereNull('equipos.deleted_at')
             ->get();
 
         $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d') . ".csv";
         $headers = [ "Content-type" => "text/csv; charset=UTF-8", "Content-Disposition" => "attachment; filename=$filename", "Pragma" => "no-cache", "Cache-Control" => "must-revalidate, post-check=0, pre-check=0", "Expires" => "0" ];
-        $columns = ['Nombre del Equipo', 'Tipo', 'CUI (Inversion)', 'Area UPSS', 'Cantidad', 'Precio Unitario', 'Precio Total'];
+        $columns = ['Nombre del Equipo', 'Tipo', 'CUI (Inversion)', 'Area UPSS', 'Servicio', 'Ambiente', 'Estado Situacional', 'Cantidad', 'Precio Unitario', 'Precio Total'];
 
         $callback = function() use($equipos, $columns) {
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); 
             fputcsv($file, $columns, ';'); 
-            foreach ($equipos as $eq) { fputcsv($file, [$eq->nombre_equipo, $eq->tipo_equipo, $eq->cui, $eq->nombre_upss ?? 'Sin área', $eq->cantidad, $eq->precio_unitario, $eq->precio_total], ';'); }
+            foreach ($equipos as $eq) { fputcsv($file, [$eq->nombre_equipo, $eq->tipo_equipo, $eq->cui, $eq->nombre_upss ?? 'Sin área', $eq->servicio, $eq->ambiente, $eq->estado_situacional, $eq->cantidad, $eq->precio_unitario, $eq->precio_total], ';'); }
             fclose($file);
         };
 

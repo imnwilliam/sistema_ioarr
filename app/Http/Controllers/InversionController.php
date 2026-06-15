@@ -21,11 +21,12 @@ class InversionController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Guardamos la Inversión y obtenemos su ID
+        // 1. Guardamos la Inversión y obtenemos su ID (Incluyendo la Fase)
         $id_inversion = DB::table('inversiones')->insertGetId([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
-            'estado_pmi' => 'Activo'
+            'estado_pmi' => 'Activo',
+            'fase' => $request->fase ?? 'Formulación'
         ]);
 
         // 2. Le creamos su "billetera" en la tabla financiera
@@ -42,11 +43,12 @@ class InversionController extends Controller
 
     public function update(Request $request, $id)
     {
-        // 1. Actualizamos datos básicos
+        // 1. Actualizamos datos básicos (Incluyendo la Fase)
         DB::table('inversiones')->where('id', $id)->update([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
-            'estado_pmi' => $request->estado_pmi
+            'estado_pmi' => $request->estado_pmi,
+            'fase' => $request->fase
         ]);
 
         // 2. Actualizamos la billetera (Usamos updateOrInsert por si el registro no existía)
@@ -60,7 +62,7 @@ class InversionController extends Controller
             ]
         );
 
-        return redirect('/inversiones')->with('success', 'Datos financieros actualizados correctamente.');
+        return redirect('/inversiones')->with('success', 'Datos actualizados correctamente.');
     }
 
     public function destroy($id)

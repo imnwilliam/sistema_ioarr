@@ -38,11 +38,12 @@
                 <table id="tabla-inversiones" class="min-w-full text-sm text-left text-gray-600">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
-                            <th>CUI / Nombre</th>
+                            <th>CUI / IOARR</th>
                             <th class="text-right">PIM (S/)</th>
                             <th class="text-right">Certificado</th>
                             <th class="text-right">Devengado</th>
-                            <th class="text-center">Estado</th>
+                            <th class="text-center">Fase</th>
+                            <th class="text-center">Estado PMI</th>
                             @if(auth()->user()->id_rol == 1)
                                 <th data-sortable="false" class="text-center">Acciones</th>
                             @endif
@@ -58,12 +59,17 @@
                                 <td class="px-4 py-3 text-right font-bold text-gray-800">{{ number_format($inv->pim ?? 0, 2) }}</td>
                                 <td class="px-4 py-3 text-right font-medium text-amber-600">{{ number_format($inv->certificado ?? 0, 2) }}</td>
                                 <td class="px-4 py-3 text-right font-medium text-emerald-600">{{ number_format($inv->devengado ?? 0, 2) }}</td>
+                                
+                                <td class="px-4 py-3 text-center">
+                                    <span class="bg-purple-100 text-purple-800 text-xs font-bold px-3 py-1 rounded-full">{{ $inv->fase ?? 'Formulación' }}</span>
+                                </td>
+
                                 <td class="px-4 py-3 text-center">
                                     <span class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">{{ $inv->estado_pmi }}</span>
                                 </td>
                                 @if(auth()->user()->id_rol == 1)
                                     <td class="px-4 py-3 text-center flex justify-center gap-2">
-                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Editar Finanzas">
+                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Editar Valores">
                                             <i class="fa-solid fa-money-bill-transfer"></i>
                                         </button>
                                         <form action="{{ route('inversiones.destroy', $inv->id) }}" method="POST" class="inline form-eliminar">
@@ -124,13 +130,25 @@
                             <label class="block text-xs font-bold text-purple-600 mb-1 uppercase">Girado</label>
                             <input type="number" name="girado" id="inp_girado" step="0.01" class="w-full border border-purple-300 rounded-lg p-2 outline-none focus:border-purple-500">
                         </div>
-                        <div class="col-span-2 mt-2">
-                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase">Estado PMI</label>
-                            <select name="estado_pmi" id="inp_estado" class="w-full border border-gray-300 rounded-lg p-2 outline-none focus:border-blue-500">
-                                <option value="Activo">Activo</option>
-                                <option value="Cerrado">Cerrado / Liquidado</option>
-                            </select>
+                        
+                        <div class="col-span-2 mt-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1 uppercase">Estado PMI</label>
+                                <select name="estado_pmi" id="inp_estado" class="w-full border border-gray-300 rounded-lg p-2 outline-none focus:border-blue-500">
+                                    <option value="Activo">Activo</option>
+                                    <option value="Cerrado / Liquidado">Cerrado / Liquidado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-purple-600 mb-1 uppercase">Fase</label>
+                                <select name="fase" id="inp_fase" class="w-full border border-purple-200 rounded-lg p-2 outline-none focus:border-purple-500 bg-purple-50/30">
+                                    <option value="Formulación">Formulación</option>
+                                    <option value="En ejecución">En ejecución</option>
+                                    <option value="En cierre">En cierre</option>
+                                </select>
+                            </div>
                         </div>
+
                     </div>
                 </div>
                 
@@ -180,6 +198,9 @@
             document.getElementById('inp_dev').value = inv.devengado || 0;
             document.getElementById('inp_girado').value = inv.girado || 0;
             document.getElementById('inp_estado').value = inv.estado_pmi || 'Activo';
+            
+            // NUEVO: Asignar la fase al abrir el modal de edición
+            document.getElementById('inp_fase').value = inv.fase || 'Formulación';
 
             document.getElementById('form-inversion').action = `/inversiones/${inv.id}`;
             document.getElementById('method-put').innerHTML = '<input type="hidden" name="_method" value="PUT">';

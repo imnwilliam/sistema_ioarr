@@ -33,9 +33,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/equipos', [EquipoController::class, 'index'])->name('equipos.index');
     Route::post('/equipos', [EquipoController::class, 'store'])->name('equipos.store');
     Route::get('/equipos/exportar', [EquipoController::class, 'exportarCSV'])->name('equipos.exportar');
-    Route::get('/equipos/descargar/{id}', [EquipoController::class, 'descargarPDF'])->name('equipos.descargar');
     Route::put('/equipos/{id}', [EquipoController::class, 'update'])->name('equipos.update');
     Route::delete('/equipos/{id}', [EquipoController::class, 'destroy'])->name('equipos.destroy');
+    
+    // NUEVA RUTA PARA BORRAR UN ARCHIVO ESPECÍFICO
+    Route::delete('/equipos/{id}/archivo/{index}', [EquipoController::class, 'destroyArchivo']);
 
     Route::post('/cronogramas', [CronogramaController::class, 'store'])->name('cronogramas.store');
 
