@@ -69,7 +69,7 @@
                                 </td>
                                 @if(auth()->user()->id_rol == 1)
                                     <td class="px-4 py-3 text-center flex justify-center gap-2">
-                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Editar Valores">
+                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Actualizar Valores">
                                             <i class="fa-solid fa-money-bill-transfer"></i>
                                         </button>
                                         <form action="{{ route('inversiones.destroy', $inv->id) }}" method="POST" class="inline form-eliminar">
@@ -205,7 +205,7 @@
             document.getElementById('form-inversion').action = `/inversiones/${inv.id}`;
             document.getElementById('method-put').innerHTML = '<input type="hidden" name="_method" value="PUT">';
             document.getElementById('panel-financiero').classList.remove('hidden');
-            document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-money-bill-transfer mr-2"></i> Actualizar Finanzas';
+            document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-money-bill-transfer mr-2"></i> Actualizar Valores';
             
             const modal = document.getElementById('modal-inversion');
             const content = document.getElementById('modal-content');

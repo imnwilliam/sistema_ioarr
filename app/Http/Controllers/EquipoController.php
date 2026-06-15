@@ -17,19 +17,28 @@ class EquipoController extends Controller
             ->select('equipos.*', 'inversiones.cui', 'areas_upss.nombre_upss')
             ->whereNull('equipos.deleted_at');
 
+        // --- SISTEMA DE FILTROS ---
         if ($request->filled('filtro_inversion')) {
             $query->where('equipos.id_inversion', $request->filtro_inversion);
         }
         if ($request->filled('filtro_upss')) {
             $query->where('equipos.id_upss', $request->filtro_upss);
         }
+        if ($request->filled('filtro_tipo')) {
+            $query->where('equipos.tipo_equipo', $request->filtro_tipo);
+        }
+
+        // --- NUEVO: CALCULAR LA SUMA TOTAL SEGÚN LOS FILTROS ---
+        $sumaTotal = $query->sum('equipos.precio_total');
 
         $equipos = $query->orderBy('equipos.id', 'desc')->get();
+        
+        // Catálogos para los selects (Tanto del modal como de los filtros)
         $inversiones = DB::table('inversiones')->where('estado_pmi', 'Activo')->get();
         $areas = DB::table('areas_upss')->get();
         $tipos = DB::table('tipos_equipo')->get();
 
-        return view('equipos', compact('equipos', 'inversiones', 'areas', 'tipos'));
+        return view('equipos', compact('equipos', 'inversiones', 'areas', 'tipos', 'sumaTotal'));
     }
 
     public function store(Request $request)
@@ -42,7 +51,7 @@ class EquipoController extends Controller
         $equipo->tipo_equipo = $request->tipo_equipo;
         $equipo->servicio = $request->servicio; 
         $equipo->ambiente = $request->ambiente;
-        $equipo->estado_situacional = $request->estado_situacional; // NUEVO CAMPO
+        $equipo->estado_situacional = $request->estado_situacional;
         $equipo->cantidad = $request->cantidad;
         $equipo->precio_unitario = $request->precio_unitario;
         $equipo->precio_total = $request->cantidad * $request->precio_unitario;
@@ -84,7 +93,7 @@ class EquipoController extends Controller
             'tipo_equipo' => $request->tipo_equipo,
             'servicio' => $request->servicio, 
             'ambiente' => $request->ambiente,
-            'estado_situacional' => $request->estado_situacional, // NUEVO CAMPO
+            'estado_situacional' => $request->estado_situacional,
             'cantidad' => $request->cantidad,
             'precio_unitario' => $request->precio_unitario,
             'precio_total' => $request->cantidad * $request->precio_unitario,
@@ -129,14 +138,20 @@ class EquipoController extends Controller
         return back()->with('error', 'El archivo no se encuentra disponible.');
     }
 
-    public function exportarCSV()
+    public function exportarCSV(Request $request)
     {
-        $equipos = DB::table('equipos')
+        $query = DB::table('equipos')
             ->leftJoin('inversiones', 'equipos.id_inversion', '=', 'inversiones.id')
             ->leftJoin('areas_upss', 'equipos.id_upss', '=', 'areas_upss.id')
             ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.servicio', 'equipos.ambiente', 'equipos.estado_situacional', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
-            ->whereNull('equipos.deleted_at')
-            ->get();
+            ->whereNull('equipos.deleted_at');
+
+        // Mantenemos los filtros al exportar
+        if ($request->filled('filtro_inversion')) $query->where('equipos.id_inversion', $request->filtro_inversion);
+        if ($request->filled('filtro_upss')) $query->where('equipos.id_upss', $request->filtro_upss);
+        if ($request->filled('filtro_tipo')) $query->where('equipos.tipo_equipo', $request->filtro_tipo);
+
+        $equipos = $query->get();
 
         $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d') . ".csv";
         $headers = [ "Content-type" => "text/csv; charset=UTF-8", "Content-Disposition" => "attachment; filename=$filename", "Pragma" => "no-cache", "Cache-Control" => "must-revalidate, post-check=0, pre-check=0", "Expires" => "0" ];

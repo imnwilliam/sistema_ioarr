@@ -7,7 +7,7 @@ use App\Http\Controllers\EquipoController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\CronogramaController;
 use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\PerfilController; // <-- NUEVO
+use App\Http\Controllers\PerfilController;
 use App\Http\Middleware\AdminMiddleware;
 
 Route::get('/', function () { return redirect('/login'); });
@@ -19,7 +19,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/inversiones/{id}/equipos', [DashboardController::class, 'equiposPorInversion']);
     Route::get('/cronograma', [CronogramaController::class, 'index'])->name('cronograma.index');
 
-    // MI PERFIL (Cualquier usuario puede cambiar su propia clave)
+    // MI PERFIL
     Route::get('/perfil', [PerfilController::class, 'index'])->name('perfil.index');
     Route::put('/perfil', [PerfilController::class, 'update'])->name('perfil.update');
 
@@ -33,17 +33,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/equipos', [EquipoController::class, 'index'])->name('equipos.index');
     Route::post('/equipos', [EquipoController::class, 'store'])->name('equipos.store');
     Route::get('/equipos/exportar', [EquipoController::class, 'exportarCSV'])->name('equipos.exportar');
+    Route::get('/equipos/descargar/{id}', [EquipoController::class, 'descargarPDF'])->name('equipos.descargar');
     Route::put('/equipos/{id}', [EquipoController::class, 'update'])->name('equipos.update');
     Route::delete('/equipos/{id}', [EquipoController::class, 'destroy'])->name('equipos.destroy');
-    
-    // NUEVA RUTA PARA BORRAR UN ARCHIVO ESPECÍFICO
     Route::delete('/equipos/{id}/archivo/{index}', [EquipoController::class, 'destroyArchivo']);
 
+    // CRONOGRAMAS SEACE
     Route::post('/cronogramas', [CronogramaController::class, 'store'])->name('cronogramas.store');
+    Route::get('/cronogramas/equipo/{id_equipo}', [CronogramaController::class, 'show']); // <-- NUEVA RUTA API
 
     // RUTAS BLINDADAS (Solo Administradores)
     Route::middleware([AdminMiddleware::class])->group(function () {
-        
         // CONFIGURACIÓN (CRUD de Catálogos)
         Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
         Route::post('/configuracion/area', [ConfiguracionController::class, 'storeArea'])->name('configuracion.area.store');

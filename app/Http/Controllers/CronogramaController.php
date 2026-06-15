@@ -20,29 +20,40 @@ class CronogramaController extends Controller
         return view('cronograma', compact('cronogramas'));
     }
 
+    // NUEVO: Devuelve los datos en formato JSON para el Modal de la tabla Equipos
+    public function show($id_equipo)
+    {
+        $cronogramas = DB::table('cronogramas')->where('id_equipo', $id_equipo)->get();
+        return response()->json($cronogramas);
+    }
+
     // 2. Guardar cronograma desde el modal de Equipos
     public function store(Request $request)
     {
         $id_equipo = $request->id_equipo;
+        $etapas = $request->etapas;
 
+        // Limpiamos cronograma anterior para insertar el nuevo
         DB::table('cronogramas')->where('id_equipo', $id_equipo)->delete();
 
-        if ($request->convocatoria_inicio || $request->convocatoria_fin) {
-            DB::table('cronogramas')->insert([
-                'id_equipo' => $id_equipo,
-                'etapa' => 'Convocatoria',
-                'fecha_inicio' => $request->convocatoria_inicio,
-                'fecha_fin' => $request->convocatoria_fin
-            ]);
+        $inserts = [];
+        
+        if ($etapas) {
+            foreach ($etapas as $key => $datos) {
+                if (!empty($datos['inicio']) || !empty($datos['fin'])) {
+                    $inserts[] = [
+                        'id_equipo' => $id_equipo,
+                        'etapa' => $datos['nombre'], 
+                        // Formateamos HTML5 datetime-local (T) a formato MySQL
+                        'fecha_inicio' => !empty($datos['inicio']) ? str_replace('T', ' ', $datos['inicio']) : null,
+                        'fecha_fin' => !empty($datos['fin']) ? str_replace('T', ' ', $datos['fin']) : null,
+                    ];
+                }
+            }
         }
 
-        if ($request->buenapro_inicio || $request->buenapro_fin) {
-            DB::table('cronogramas')->insert([
-                'id_equipo' => $id_equipo,
-                'etapa' => 'Otorgamiento de la Buena Pro',
-                'fecha_inicio' => $request->buenapro_inicio,
-                'fecha_fin' => $request->buenapro_fin
-            ]);
+        if (count($inserts) > 0) {
+            DB::table('cronogramas')->insert($inserts);
         }
 
         return redirect('/equipos')->with('success', 'Cronograma SEACE actualizado correctamente.');
