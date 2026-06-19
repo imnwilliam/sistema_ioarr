@@ -21,10 +21,11 @@ class InversionController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Guardamos la Inversión y obtenemos su ID (Incluyendo la Fase)
+        // 1. Guardamos la Inversión incluyendo el nuevo Tipo de IOARR
         $id_inversion = DB::table('inversiones')->insertGetId([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
+            'tipo_ioarr' => $request->tipo_ioarr, // <-- NUEVO CAMPO
             'estado_pmi' => 'Activo',
             'fase' => $request->fase ?? 'Formulación'
         ]);
@@ -43,15 +44,16 @@ class InversionController extends Controller
 
     public function update(Request $request, $id)
     {
-        // 1. Actualizamos datos básicos (Incluyendo la Fase)
+        // 1. Actualizamos datos básicos y el Tipo de IOARR
         DB::table('inversiones')->where('id', $id)->update([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
+            'tipo_ioarr' => $request->tipo_ioarr, // <-- NUEVO CAMPO
             'estado_pmi' => $request->estado_pmi,
             'fase' => $request->fase
         ]);
 
-        // 2. Actualizamos la billetera (Usamos updateOrInsert por si el registro no existía)
+        // 2. Actualizamos la billetera
         DB::table('financiera')->updateOrInsert(
             ['id_inversion' => $id],
             [

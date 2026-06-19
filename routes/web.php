@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InversionController;
 use App\Http\Controllers\EquipoController;
@@ -8,16 +11,34 @@ use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\CronogramaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\RolController;
 use App\Http\Middleware\AdminMiddleware;
+
+// NUEVO: Escuchamos silenciosamente cada petición que termine en el sistema
+Event::listen(RequestHandled::class, function (RequestHandled $event) {
+    $request = $event->request;
+    $response = $event->response;
+    
+    // Si la petición fue POST, PUT o DELETE, no fue un logout, y el usuario está logueado
+    if (in_array($request->method(), ['POST', 'PUT', 'DELETE']) && !$request->is('logout') && auth()->check()) {
+        // Y si no hubo error de validación ni del servidor (Status menor a 400)
+        if ($response->status() < 400) {
+            Cache::forever('ultima_modificacion', [
+                'usuario' => auth()->user()->name,
+                'fecha' => now()->format('Y-m-d H:i:s')
+            ]);
+        }
+    }
+});
 
 Route::get('/', function () { return redirect('/login'); });
 
+// Volvemos a la estructura normal y limpia del Middleware 'auth'
 Route::middleware(['auth'])->group(function () {
     
     // RUTAS PÚBLICAS (Para todos los roles)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/api/inversiones/{id}/equipos', [DashboardController::class, 'equiposPorInversion']);
-    Route::get('/cronograma', [CronogramaController::class, 'index'])->name('cronograma.index');
 
     // MI PERFIL
     Route::get('/perfil', [PerfilController::class, 'index'])->name('perfil.index');
@@ -40,11 +61,12 @@ Route::middleware(['auth'])->group(function () {
 
     // CRONOGRAMAS SEACE
     Route::post('/cronogramas', [CronogramaController::class, 'store'])->name('cronogramas.store');
-    Route::get('/cronogramas/equipo/{id_equipo}', [CronogramaController::class, 'show']); // <-- NUEVA RUTA API
+    Route::get('/cronogramas/equipo/{id_equipo}', [CronogramaController::class, 'show']);
 
     // RUTAS BLINDADAS (Solo Administradores)
     Route::middleware([AdminMiddleware::class])->group(function () {
-        // CONFIGURACIÓN (CRUD de Catálogos)
+        
+        // CONFIGURACIÓN
         Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
         Route::post('/configuracion/area', [ConfiguracionController::class, 'storeArea'])->name('configuracion.area.store');
         Route::put('/configuracion/area/{id}', [ConfiguracionController::class, 'updateArea'])->name('configuracion.area.update');
@@ -57,6 +79,12 @@ Route::middleware(['auth'])->group(function () {
         // USUARIOS
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
         Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+
+        // PERFILES Y ROLES
+        Route::get('/roles', [RolController::class, 'index'])->name('roles.index');
+        Route::post('/roles', [RolController::class, 'store'])->name('roles.store');
+        Route::put('/roles/{id}', [RolController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{id}', [RolController::class, 'destroy'])->name('roles.destroy');
     });
 });
 

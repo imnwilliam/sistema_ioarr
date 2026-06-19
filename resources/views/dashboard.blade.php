@@ -26,13 +26,31 @@
                     <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center mr-3 shadow-md shadow-blue-500/30 text-sm">
                         <i class="fa-solid fa-chart-pie"></i>
                     </div>
-                    Panel Gerencial de Inversiones
+                    Seguimiento de Inversiones
                 </h2>
-                <p class="text-sm text-slate-500 mt-1.5 font-medium ml-11">Visión global de ejecución financiera y distribución de equipamiento</p>
             </div>
-            <div class="hidden md:flex items-center text-sm font-bold text-slate-500 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200">
-                <i class="fa-regular fa-calendar-check text-blue-500 mr-2 text-lg"></i>
-                <span class="uppercase tracking-wider text-xs">{{ date('d M Y') }}</span>
+            
+            @php
+                $ultimaMod = \Illuminate\Support\Facades\Cache::get('ultima_modificacion');
+            @endphp
+
+            <div class="hidden md:flex bg-blue-50/80 border border-blue-100 rounded-xl px-5 py-2.5 items-center shadow-sm">
+                <div class="bg-blue-600 text-white rounded-lg w-10 h-10 flex items-center justify-center mr-3 shadow-md">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-0.5">Última Modificación</span>
+                    @if($ultimaMod)
+                        <span class="text-sm font-black text-slate-800 leading-none">
+                            {{ \Carbon\Carbon::parse($ultimaMod['fecha'])->format('d/m/Y - h:i A') }}
+                        </span>
+                        <span class="text-[10px] text-slate-500 font-medium mt-1 truncate max-w-[150px]" title="{{ $ultimaMod['usuario'] }}">
+                            Por: <span class="font-bold text-blue-700">{{ $ultimaMod['usuario'] }}</span>
+                        </span>
+                    @else
+                        <span class="text-sm font-bold text-slate-400">Sin actividad reciente</span>
+                    @endif
+                </div>
             </div>
         </header>
 
@@ -127,7 +145,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Inversiones vs. Monto de Equipamiento</h3>
+                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Total de Inversiones activas</h3>
                     <p class="text-xs text-gray-400 mb-4">Haz clic en una barra para ver el desglose de equipos.</p>
                     <div id="chart-inversiones"></div>
                 </div>

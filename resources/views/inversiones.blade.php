@@ -39,6 +39,7 @@
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
                             <th>CUI / IOARR</th>
+                            <th class="text-center">Tipo</th>
                             <th class="text-right">PIM (S/)</th>
                             <th class="text-right">Certificado</th>
                             <th class="text-right">Devengado</th>
@@ -56,6 +57,13 @@
                                     <div class="font-black text-blue-700 text-base">{{ $inv->cui }}</div>
                                     <div class="text-xs text-gray-500 font-semibold mt-1 w-64 truncate" title="{{ $inv->nombre_inversion }}">{{ $inv->nombre_inversion }}</div>
                                 </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if($inv->tipo_ioarr)
+                                        <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">{{ $inv->tipo_ioarr }}</span>
+                                    @else
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-right font-bold text-gray-800">{{ number_format($inv->pim ?? 0, 2) }}</td>
                                 <td class="px-4 py-3 text-right font-medium text-amber-600">{{ number_format($inv->certificado ?? 0, 2) }}</td>
                                 <td class="px-4 py-3 text-right font-medium text-emerald-600">{{ number_format($inv->devengado ?? 0, 2) }}</td>
@@ -69,8 +77,8 @@
                                 </td>
                                 @if(auth()->user()->id_rol == 1)
                                     <td class="px-4 py-3 text-center flex justify-center gap-2">
-                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Actualizar Valores">
-                                            <i class="fa-solid fa-money-bill-transfer"></i>
+                                        <button onclick="editarInversion({{ json_encode($inv) }})" class="text-blue-600 hover:bg-blue-100 p-2 rounded-lg smooth-transition" title="Editar Valores">
+                                            <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <form action="{{ route('inversiones.destroy', $inv->id) }}" method="POST" class="inline form-eliminar">
                                             @csrf
@@ -108,6 +116,17 @@
                     <div class="col-span-2">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre de la Inversión *</label>
                         <input type="text" name="nombre_inversion" id="inp_nombre" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500">
+                    </div>
+                    
+                    <div class="col-span-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de IOARR *</label>
+                        <select name="tipo_ioarr" id="inp_tipo_ioarr" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-white">
+                            <option value="">Seleccionar Tipo...</option>
+                            <option value="Optimización">Optimización</option>
+                            <option value="Reposición">Reposición</option>
+                            <option value="Rehabilitación">Rehabilitación</option>
+                            <option value="Ampliación Marginal">Ampliación Marginal</option>
+                        </select>
                     </div>
                 </div>
 
@@ -181,6 +200,7 @@
             document.getElementById('form-inversion').reset();
             document.getElementById('form-inversion').action = "{{ route('inversiones.store') }}";
             document.getElementById('method-put').innerHTML = '';
+            document.getElementById('inp_tipo_ioarr').value = ''; // Limpiamos el nuevo campo
             document.getElementById('panel-financiero').classList.add('hidden');
             document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-folder-plus mr-2"></i> Nuevo IOARR';
             
@@ -193,19 +213,18 @@
         function editarInversion(inv) {
             document.getElementById('inp_cui').value = inv.cui;
             document.getElementById('inp_nombre').value = inv.nombre_inversion;
+            document.getElementById('inp_tipo_ioarr').value = inv.tipo_ioarr || ''; // Cargamos el nuevo campo
             document.getElementById('inp_pim').value = inv.pim || 0;
             document.getElementById('inp_cert').value = inv.certificado || 0;
             document.getElementById('inp_dev').value = inv.devengado || 0;
             document.getElementById('inp_girado').value = inv.girado || 0;
             document.getElementById('inp_estado').value = inv.estado_pmi || 'Activo';
-            
-            // NUEVO: Asignar la fase al abrir el modal de edición
             document.getElementById('inp_fase').value = inv.fase || 'Formulación';
 
             document.getElementById('form-inversion').action = `/inversiones/${inv.id}`;
             document.getElementById('method-put').innerHTML = '<input type="hidden" name="_method" value="PUT">';
             document.getElementById('panel-financiero').classList.remove('hidden');
-            document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-money-bill-transfer mr-2"></i> Actualizar Valores';
+            document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i> Editar IOARR';
             
             const modal = document.getElementById('modal-inversion');
             const content = document.getElementById('modal-content');
