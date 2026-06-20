@@ -93,7 +93,7 @@
                     <h3 class="font-bold text-gray-700"><i class="fa-solid fa-filter mr-2 text-blue-500"></i> Filtros de Búsqueda</h3>
                 </div>
                 <div class="p-6">
-                    <form action="{{ route('equipos.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-5 items-end">
+                    <form action="{{ route('equipos.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-5 items-end">
                         
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Inversión (CUI)</label>
@@ -131,6 +131,11 @@
                             </select>
                         </div>
 
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">N° Expediente</label>
+                            <input type="text" name="filtro_expediente" value="{{ request('filtro_expediente') }}" placeholder="Buscar N°..." class="w-full border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500 text-sm h-[42px] text-gray-700">
+                        </div>
+
                         <div class="flex gap-2">
                             <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg smooth-transition shadow-md shadow-blue-500/20">
                                 <i class="fa-solid fa-magnifying-glass mr-2"></i> Filtrar
@@ -147,7 +152,7 @@
                 <table id="tabla-equipos" class="min-w-full text-sm text-left text-gray-600">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
-                            <th>Equipo / Tipo</th>
+                            <th>Equipo / Tipo / Exp.</th>
                             <th>Inversión (CUI)</th>
                             <th>UPSS / Servicio / Ambiente</th>
                             <th>Estado Situacional</th>
@@ -162,6 +167,7 @@
                                 <td class="px-4 py-3">
                                     <div class="font-bold text-gray-900">{{ $eq->nombre_equipo }}</div>
                                     <div class="text-xs text-purple-600 font-semibold mt-1">{{ $eq->tipo_equipo }}</div>
+                                    <div class="text-[11px] text-gray-500 mt-0.5"><span class="font-medium text-gray-600">Exp:</span> {{ $eq->expediente ?? 'N/A' }}</div>
                                 </td>
                                 <td class="px-4 py-3 font-medium text-blue-700">{{ $eq->cui }}</td>
                                 <td class="px-4 py-3">
@@ -240,7 +246,6 @@
 
     @include('equipos.modal-equipo')
     @include('equipos.modal-cronograma')
-
     @include('equipos.scripts')
 
 </body>

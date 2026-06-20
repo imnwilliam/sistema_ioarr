@@ -145,7 +145,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Total de Inversiones activas</h3>
+                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Valor total de las inversiones</h3>
                     <p class="text-xs text-gray-400 mb-4">Haz clic en una barra para ver el desglose de equipos.</p>
                     <div id="chart-inversiones"></div>
                 </div>
@@ -164,7 +164,7 @@
                 <div class="p-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="bg-white rounded-xl p-4 overflow-y-auto max-h-[350px]">
-                            <h4 class="text-sm font-bold text-gray-600 text-center mb-2">Tipos de Equipo</h4>
+                            <h4 class="text-sm font-bold text-gray-600 text-center mb-2">Equipos</h4>
                             <div id="chart-detalle-tipos"></div>
                         </div>
                         <div class="col-span-1 lg:col-span-2 bg-white rounded-xl overflow-hidden">
@@ -242,7 +242,7 @@
         const invDatos = @json($inversionesMontos);
         const areasDatos = @json($equiposPorArea);
         
-        let chartTipos = null; // Variable global para el sub-gráfico
+        let chartTipos = null; 
 
         // --- GRÁFICO 1: Barras de Inversiones ---
         const invLabels = invDatos.map(i => i.cui);
@@ -254,7 +254,6 @@
                 type: 'bar', height: 350, fontFamily: 'Inter, sans-serif',
                 toolbar: { show: false },
                 events: {
-                    // EVENTO CLICK (Drill-down y Deselección)
                     dataPointSelection: function(event, chartContext, config) {
                         const seleccionados = config.selectedDataPoints[0];
                         if (seleccionados.length === 0) {
@@ -324,21 +323,23 @@
                         });
                     }
 
-                    const conteoTipos = {};
+                    // MODIFICADO: Ahora agrupa por nombre del equipo en lugar del tipo
+                    const conteoEquipos = {};
                     equipos.forEach(eq => {
-                        conteoTipos[eq.tipo_equipo] = (conteoTipos[eq.tipo_equipo] || 0) + eq.cantidad;
+                        conteoEquipos[eq.nombre_equipo] = (conteoEquipos[eq.nombre_equipo] || 0) + eq.cantidad;
                     });
 
                     if(chartTipos) { chartTipos.destroy(); } 
 
-                    const alturaDinamica = Math.max(260, Object.keys(conteoTipos).length * 35);
+                    // Ajuste de altura dinámica basado en cantidad de equipos
+                    const alturaDinamica = Math.max(260, Object.keys(conteoEquipos).length * 45);
 
                     const optionsTipos = {
                         chart: { type: 'bar', height: alturaDinamica, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-                        series: [{ name: 'Cantidad', data: Object.values(conteoTipos) }],
-                        xaxis: { categories: Object.keys(conteoTipos) },
+                        series: [{ name: 'Cantidad', data: Object.values(conteoEquipos) }],
+                        xaxis: { categories: Object.keys(conteoEquipos) },
                         colors: ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'],
-                        plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true, barHeight: '70%' } },
+                        plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true, barHeight: '60%' } },
                         dataLabels: { enabled: true, textAnchor: 'start', style: { fontSize: '12px', colors: ['#fff'] }, offsetX: 10 },
                         legend: { show: false }, 
                         tooltip: { theme: 'light' }
@@ -356,7 +357,7 @@
                     if(Object.keys(conteoAreasCUI).length > 0) {
                         chartAreasObj.updateOptions({ labels: Object.keys(conteoAreasCUI) });
                         chartAreasObj.updateSeries(Object.values(conteoAreasCUI));
-                        document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> Áreas del CUI: ${cui}`;
+                        document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> UPSS: ${cui}`;
                     } else {
                         chartAreasObj.updateOptions({ labels: ['Sin Equipos'] });
                         chartAreasObj.updateSeries([1]); 

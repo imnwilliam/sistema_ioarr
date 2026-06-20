@@ -27,13 +27,15 @@ class EquipoController extends Controller
         if ($request->filled('filtro_tipo')) {
             $query->where('equipos.tipo_equipo', $request->filtro_tipo);
         }
+        // NUEVO FILTRO: Número de Expediente
+        if ($request->filled('filtro_expediente')) {
+            $query->where('equipos.expediente', 'LIKE', '%' . $request->filtro_expediente . '%');
+        }
 
-        // --- NUEVO: CALCULAR LA SUMA TOTAL SEGÚN LOS FILTROS ---
         $sumaTotal = $query->sum('equipos.precio_total');
 
         $equipos = $query->orderBy('equipos.id', 'desc')->get();
         
-        // Catálogos para los selects (Tanto del modal como de los filtros)
         $inversiones = DB::table('inversiones')->where('estado_pmi', 'Activo')->get();
         $areas = DB::table('areas_upss')->get();
         $tipos = DB::table('tipos_equipo')->get();
@@ -143,25 +145,27 @@ class EquipoController extends Controller
         $query = DB::table('equipos')
             ->leftJoin('inversiones', 'equipos.id_inversion', '=', 'inversiones.id')
             ->leftJoin('areas_upss', 'equipos.id_upss', '=', 'areas_upss.id')
-            ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.servicio', 'equipos.ambiente', 'equipos.estado_situacional', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
+            ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'equipos.expediente', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.servicio', 'equipos.ambiente', 'equipos.estado_situacional', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
             ->whereNull('equipos.deleted_at');
 
-        // Mantenemos los filtros al exportar
         if ($request->filled('filtro_inversion')) $query->where('equipos.id_inversion', $request->filtro_inversion);
         if ($request->filled('filtro_upss')) $query->where('equipos.id_upss', $request->filtro_upss);
         if ($request->filled('filtro_tipo')) $query->where('equipos.tipo_equipo', $request->filtro_tipo);
+        if ($request->filled('filtro_expediente')) $query->where('equipos.expediente', 'LIKE', '%' . $request->filtro_expediente . '%');
 
         $equipos = $query->get();
 
         $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d') . ".csv";
         $headers = [ "Content-type" => "text/csv; charset=UTF-8", "Content-Disposition" => "attachment; filename=$filename", "Pragma" => "no-cache", "Cache-Control" => "must-revalidate, post-check=0, pre-check=0", "Expires" => "0" ];
-        $columns = ['Nombre del Equipo', 'Tipo', 'CUI (Inversion)', 'Area UPSS', 'Servicio', 'Ambiente', 'Estado Situacional', 'Cantidad', 'Precio Unitario', 'Precio Total'];
+        
+        // Se añade Expediente a las columnas del Excel
+        $columns = ['Nombre del Equipo', 'Tipo', 'Expediente', 'CUI (Inversion)', 'Area UPSS', 'Servicio', 'Ambiente', 'Estado Situacional', 'Cantidad', 'Precio Unitario', 'Precio Total'];
 
         $callback = function() use($equipos, $columns) {
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); 
             fputcsv($file, $columns, ';'); 
-            foreach ($equipos as $eq) { fputcsv($file, [$eq->nombre_equipo, $eq->tipo_equipo, $eq->cui, $eq->nombre_upss ?? 'Sin área', $eq->servicio, $eq->ambiente, $eq->estado_situacional, $eq->cantidad, $eq->precio_unitario, $eq->precio_total], ';'); }
+            foreach ($equipos as $eq) { fputcsv($file, [$eq->nombre_equipo, $eq->tipo_equipo, $eq->expediente ?? 'N/A', $eq->cui, $eq->nombre_upss ?? 'Sin área', $eq->servicio, $eq->ambiente, $eq->estado_situacional, $eq->cantidad, $eq->precio_unitario, $eq->precio_total], ';'); }
             fclose($file);
         };
 
