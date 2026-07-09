@@ -8,10 +8,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
 
     <style> 
         body { font-family: 'Inter', sans-serif; } 
         .smooth-transition { transition: all 0.3s ease; }
+
+        /* ---------------------------------------------------
+           DISEÑO ELEGANTE (Borde suave tipo relieve)
+           --------------------------------------------------- */
+        .datatable-top, .dataTable-top {
+            padding-bottom: 1rem;
+        }
+        
+        /* Buscador */
+        .datatable-input, .dataTable-input { 
+            border-radius: 0.5rem !important; 
+            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            padding: 0.5rem 0.75rem !important; 
+            outline: none !important; 
+            color: #374151 !important;
+            background-color: #ffffff !important;
+            transition: all 0.25s ease;
+        }
+        .datatable-input:hover, .dataTable-input:hover {
+            border-color: #9ca3af !important; /* Se oscurece ligeramente al pasar el mouse */
+        }
+        .datatable-input:focus, .dataTable-input:focus { 
+            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        /* Selector de cantidad (10, 25, 50...) */
+        .datatable-selector, .dataTable-selector { 
+            border-radius: 0.5rem !important; 
+            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            padding: 0.4rem 1.8rem 0.4rem 0.75rem !important; 
+            outline: none !important;
+            color: #374151 !important;
+            background-color: #ffffff !important;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .datatable-selector:hover, .datatable-selector:hover {
+            border-color: #9ca3af !important;
+        }
+        .datatable-selector:focus, .dataTable-selector:focus { 
+            border-color: #3b82f6 !important; 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -20,7 +66,7 @@
 
     <main class="flex-1 flex flex-col overflow-y-auto">
         
-        <header class="bg-white border-b border-gray-200 px-8 py-5 sticky top-0 z-10 shadow-sm flex justify-between items-center">
+        <header class="bg-white border-b border-gray-200 px-8 py-5 sticky top-0 z-40 shadow-sm flex justify-between items-center">
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight flex items-center">
                     <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center mr-3 shadow-md shadow-blue-500/30 text-sm">
@@ -62,15 +108,12 @@
                 $totalDevengado = $financiera->total_devengado ?? 0;
                 $totalGirado = $financiera->total_girado ?? 0;
 
-                // Evitar división por cero
                 $pctCertificado = $totalPim > 0 ? ($totalCertificado / $totalPim) * 100 : 0;
                 $pctDevengado = $totalPim > 0 ? ($totalDevengado / $totalPim) * 100 : 0;
                 $pctGirado = $totalPim > 0 ? ($totalGirado / $totalPim) * 100 : 0;
                 
-                // Avance general de ejecución
                 $avanceGeneral = $pctDevengado; 
 
-                // Función para determinar colores del semáforo según porcentaje
                 $getColoresAvance = function($pct) {
                     if ($pct <= 25) return ['bar' => 'bg-red-500', 'icon' => 'text-red-400'];
                     if ($pct <= 50) return ['bar' => 'bg-orange-500', 'icon' => 'text-orange-400'];
@@ -78,7 +121,6 @@
                     return ['bar' => 'bg-emerald-500', 'icon' => 'text-emerald-400'];
                 };
 
-                // Asignar colores para la tarjeta general
                 $colorGen = $getColoresAvance($avanceGeneral);
             @endphp
 
@@ -144,19 +186,36 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Valor total de las inversiones</h3>
-                    <p class="text-xs text-gray-400 mb-4">Haz clic en una barra para ver el desglose de equipos.</p>
-                    <div id="chart-inversiones"></div>
+                <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-chart-column text-blue-500 mr-2"></i> Valor total de las inversiones</h3>
+                            <p class="text-xs text-gray-400 mt-1">Haz clic en una barra para ver el desglose de equipos.</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-search text-gray-400 text-xs"></i>
+                                </div>
+                                <input type="text" id="buscador-grafico" placeholder="Buscar CUI..." class="pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-blue-500 transition-colors w-40 md:w-48">
+                            </div>
+                            <div class="flex gap-1 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                                <button onclick="prevChartPage()" id="btn-prev-chart" class="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-gray-600 rounded shadow-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all" title="Anteriores"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                                <button onclick="nextChartPage()" id="btn-next-chart" class="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-gray-600 rounded shadow-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all" title="Siguientes"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="chart-inversiones" class="mt-auto"></div>
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h3 id="titulo-chart-areas" class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-chart-donut text-purple-500 mr-2"></i> Distribución Global por Áreas</h3>
-                    <div id="chart-areas"></div>
+                    <div id="chart-areas" class="mt-4"></div>
                 </div>
             </div>
 
-            <div id="panel-detalle" class="hidden bg-slate-900 rounded-2xl shadow-xl overflow-hidden smooth-transition">
+            <div id="panel-detalle" class="hidden bg-slate-900 rounded-2xl shadow-xl overflow-hidden smooth-transition mt-6">
                 <div class="p-4 bg-blue-600 flex justify-between items-center text-white">
                     <h3 class="font-bold"><i class="fa-solid fa-microscope mr-2"></i> Detalle de Equipos: <span id="lbl-cui" class="text-blue-200"></span></h3>
                     <button onclick="cerrarDetalle()" class="text-white hover:text-gray-200 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -192,8 +251,9 @@
                 <div class="p-6 border-b border-gray-100">
                     <h3 class="font-bold text-gray-800"><i class="fa-solid fa-file-invoice-dollar text-emerald-500 mr-2"></i> Cuadro de Ejecución Financiera por Inversión</h3>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm text-left text-gray-600">
+                
+                <div class="p-4">
+                    <table id="tabla-financiera" class="min-w-full text-sm text-left text-gray-600">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
                                 <th class="px-6 py-4">Inversión (CUI)</th>
@@ -224,11 +284,6 @@
                                     </td>
                                 </tr>
                             @endforeach
-                            @if(count($ejecucionTabla) == 0)
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-gray-400 font-medium">No hay registros financieros.</td>
-                                </tr>
-                            @endif
                         </tbody>
                     </table>
                 </div>
@@ -238,48 +293,101 @@
     </main>
 
     <script>
-        // Datos enviados desde el Controlador
-        const invDatos = @json($inversionesMontos);
-        const areasDatos = @json($equiposPorArea);
-        
-        let chartTipos = null; 
-
-        // --- GRÁFICO 1: Barras de Inversiones ---
-        const invLabels = invDatos.map(i => i.cui);
-        const invMontos = invDatos.map(i => i.monto_total);
-        const invIds = invDatos.map(i => i.id);
-
-        const optionsInv = {
-            chart: { 
-                type: 'bar', height: 350, fontFamily: 'Inter, sans-serif',
-                toolbar: { show: false },
-                events: {
-                    dataPointSelection: function(event, chartContext, config) {
-                        const seleccionados = config.selectedDataPoints[0];
-                        if (seleccionados.length === 0) {
-                            cerrarDetalle();
-                        } else {
-                            const index = config.dataPointIndex;
-                            const idInversion = invIds[index];
-                            const cuiSeleccionado = invLabels[index];
-                            cargarDetalleEquipos(idInversion, cuiSeleccionado);
-                        }
-                    }
+        // --- 1. Inicializar la tabla financiera con Datatables ---
+        document.addEventListener("DOMContentLoaded", function() {
+            new simpleDatatables.DataTable("#tabla-financiera", {
+                searchable: true,
+                perPage: 10,
+                perPageSelect: [10, 15, 25, 50, 100],
+                labels: { 
+                    placeholder: "Buscar CUI...", 
+                    perPage: "filas por pág.", 
+                    noRows: "No hay registros financieros.", 
+                    info: "{start} a {end} de {rows}" 
                 }
-            },
-            series: [{ name: 'Monto Equipamiento (S/)', data: invMontos }],
-            xaxis: { categories: invLabels, title: { text: 'Códigos CUI (IOARR)', style: { fontWeight: 600, color: '#64748b' } } },
-            colors: ['#3b82f6'],
-            plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '40%' } },
-            dataLabels: { enabled: false },
-            tooltip: { 
-                theme: 'light',
-                y: { formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); } } 
-            }
-        };
-        new ApexCharts(document.querySelector("#chart-inversiones"), optionsInv).render();
+            });
+        });
 
-        // --- GRÁFICO 2: Áreas (Pie Chart) ---
+        const allInvDatos = @json($inversionesMontos);
+        const areasDatos = @json($equiposPorArea);
+        let chartTipos = null; 
+        
+        // --- 2. Lógica del Gráfico de Barras con Paginación ---
+        let filteredInvDatos = [...allInvDatos];
+        let currentChartPage = 0;
+        const chartPageSize = 5; // Mostrar 5 barras máximo
+        let currentChartItems = [];
+        let chartInversionesObj = null;
+
+        function renderChart() {
+            const start = currentChartPage * chartPageSize;
+            currentChartItems = filteredInvDatos.slice(start, start + chartPageSize);
+
+            const invLabels = currentChartItems.map(i => i.cui);
+            const invMontos = currentChartItems.map(i => i.monto_total);
+
+            if(!chartInversionesObj) {
+                const optionsInv = {
+                    chart: { 
+                        type: 'bar', height: 350, fontFamily: 'Inter, sans-serif', toolbar: { show: false },
+                        events: {
+                            dataPointSelection: function(event, chartContext, config) {
+                                const seleccionados = config.selectedDataPoints[0];
+                                if (seleccionados.length === 0) {
+                                    cerrarDetalle();
+                                } else {
+                                    // Utilizamos currentChartItems para obtener el CUI correcto según la página actual
+                                    const index = config.dataPointIndex;
+                                    cargarDetalleEquipos(currentChartItems[index].id, currentChartItems[index].cui);
+                                }
+                            }
+                        }
+                    },
+                    series: [{ name: 'Monto Equipamiento (S/)', data: invMontos }],
+                    xaxis: { categories: invLabels, title: { text: 'Códigos CUI (IOARR)', style: { fontWeight: 600, color: '#64748b' } } },
+                    colors: ['#3b82f6'],
+                    plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '40%', dataLabels: { position: 'top' } } },
+                    dataLabels: { 
+                        enabled: true, 
+                        formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); },
+                        offsetY: -20, 
+                        style: { fontSize: '12px', colors: ["#304758"] }
+                    },
+                    tooltip: { 
+                        theme: 'light',
+                        y: { formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); } } 
+                    }
+                };
+                chartInversionesObj = new ApexCharts(document.querySelector("#chart-inversiones"), optionsInv);
+                chartInversionesObj.render();
+            } else {
+                chartInversionesObj.updateOptions({ xaxis: { categories: invLabels } });
+                chartInversionesObj.updateSeries([{ data: invMontos }]);
+            }
+            updateChartControls();
+        }
+
+        // Control de los botones < y >
+        function updateChartControls() {
+            document.getElementById('btn-prev-chart').disabled = currentChartPage === 0;
+            document.getElementById('btn-next-chart').disabled = (currentChartPage + 1) * chartPageSize >= filteredInvDatos.length;
+        }
+        function prevChartPage() { if(currentChartPage > 0) { currentChartPage--; renderChart(); } }
+        function nextChartPage() { if((currentChartPage + 1) * chartPageSize < filteredInvDatos.length) { currentChartPage++; renderChart(); } }
+
+        // Buscador interactivo del gráfico
+        document.getElementById('buscador-grafico').addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            filteredInvDatos = allInvDatos.filter(i => i.cui.toLowerCase().includes(term));
+            currentChartPage = 0;
+            renderChart();
+        });
+
+        // Llamada inicial para pintar el gráfico
+        renderChart();
+
+
+        // --- 3. Gráfico 2: Áreas (Pie Chart) ---
         let chartAreasObj = null; 
         const optionsAreas = {
             chart: { type: 'donut', height: 350, fontFamily: 'Inter, sans-serif' },
@@ -287,13 +395,18 @@
             labels: areasDatos.map(a => a.nombre_upss),
             colors: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
             plotOptions: { pie: { donut: { size: '65%' } } },
-            dataLabels: { enabled: false },
+            dataLabels: { 
+                enabled: true,
+                formatter: function (val) { return val.toFixed(1) + "%"; },
+                dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 }
+            },
             legend: { position: 'bottom', markers: { radius: 12 } }
         };
         chartAreasObj = new ApexCharts(document.querySelector("#chart-areas"), optionsAreas);
         chartAreasObj.render();
 
-        // --- LÓGICA DEL DRILL-DOWN (AJAX) ---
+
+        // --- 4. LÓGICA DEL DRILL-DOWN (AJAX) ---
         function cargarDetalleEquipos(idInversion, cui) {
             document.getElementById('lbl-cui').innerText = cui;
             document.getElementById('panel-detalle').classList.remove('hidden');
@@ -323,7 +436,6 @@
                         });
                     }
 
-                    // MODIFICADO: Ahora agrupa por nombre del equipo en lugar del tipo
                     const conteoEquipos = {};
                     equipos.forEach(eq => {
                         conteoEquipos[eq.nombre_equipo] = (conteoEquipos[eq.nombre_equipo] || 0) + eq.cantidad;
@@ -331,7 +443,6 @@
 
                     if(chartTipos) { chartTipos.destroy(); } 
 
-                    // Ajuste de altura dinámica basado en cantidad de equipos
                     const alturaDinamica = Math.max(260, Object.keys(conteoEquipos).length * 45);
 
                     const optionsTipos = {
@@ -357,7 +468,7 @@
                     if(Object.keys(conteoAreasCUI).length > 0) {
                         chartAreasObj.updateOptions({ labels: Object.keys(conteoAreasCUI) });
                         chartAreasObj.updateSeries(Object.values(conteoAreasCUI));
-                        document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> UPSS: ${cui}`;
+                        document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> Áreas del CUI: ${cui}`;
                     } else {
                         chartAreasObj.updateOptions({ labels: ['Sin Equipos'] });
                         chartAreasObj.updateSeries([1]); 

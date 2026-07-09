@@ -64,9 +64,49 @@
             color: #1d4ed8 !important;
         }
 
-        .dataTable-input { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.5rem; outline: none; }
-        .dataTable-input:focus { border-color: #2563eb; }
-        .dataTable-selector { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.3rem; }
+        /* ---------------------------------------------------
+           DISEÑO ELEGANTE (Borde suave tipo relieve)
+           --------------------------------------------------- */
+        .datatable-top, .dataTable-top {
+            padding-bottom: 1rem;
+        }
+        
+        /* Buscador */
+        .datatable-input, .dataTable-input { 
+            border-radius: 0.5rem !important; 
+            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            padding: 0.5rem 0.75rem !important; 
+            outline: none !important; 
+            color: #374151 !important;
+            background-color: #ffffff !important;
+            transition: all 0.25s ease;
+        }
+        .datatable-input:hover, .dataTable-input:hover {
+            border-color: #9ca3af !important; /* Se oscurece ligeramente al pasar el mouse */
+        }
+        .datatable-input:focus, .dataTable-input:focus { 
+            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        /* Selector de cantidad (10, 25, 50...) */
+        .datatable-selector, .dataTable-selector { 
+            border-radius: 0.5rem !important; 
+            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            padding: 0.4rem 1.8rem 0.4rem 0.75rem !important; 
+            outline: none !important;
+            color: #374151 !important;
+            background-color: #ffffff !important;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .datatable-selector:hover, .datatable-selector:hover {
+            border-color: #9ca3af !important;
+        }
+        .datatable-selector:focus, .dataTable-selector:focus { 
+            border-color: #3b82f6 !important; 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">

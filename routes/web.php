@@ -14,18 +14,15 @@ use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\RolController;
 use App\Http\Middleware\AdminMiddleware;
 
-// NUEVO: Escuchamos silenciosamente cada petición que termine en el sistema
 Event::listen(RequestHandled::class, function (RequestHandled $event) {
     $request = $event->request;
     $response = $event->response;
     
-    // Si la petición fue POST, PUT o DELETE, no fue un logout, y el usuario está logueado
     if (in_array($request->method(), ['POST', 'PUT', 'DELETE']) && !$request->is('logout') && auth()->check()) {
-        // Y si no hubo error de validación ni del servidor (Status menor a 400)
         if ($response->status() < 400) {
             Cache::forever('ultima_modificacion', [
                 'usuario' => auth()->user()->name,
-                'fecha' => now()->format('Y-m-d H:i:s')
+                'fecha' => now('America/Lima')->format('Y-m-d H:i:s')
             ]);
         }
     }
