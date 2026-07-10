@@ -18,9 +18,11 @@
         .smooth-transition { transition: all 0.3s ease; }
         .ts-control { border-radius: 0.5rem; border-color: #d1d5db; padding: 0.5rem; box-shadow: none; }
         .ts-control.focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
-        .dataTable-input { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.5rem; outline: none; }
-        .dataTable-input:focus { border-color: #2563eb; }
-        .dataTable-selector { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.3rem; }
+        
+        .datatable-top, .dataTable-top { padding-bottom: 1rem; }
+        .dataTable-input { border-radius: 0.5rem; border: 1.5px solid #d1d5db; padding: 0.5rem 0.75rem; outline: none; transition: all 0.25s ease;}
+        .dataTable-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
+        .dataTable-selector { border-radius: 0.5rem; border: 1.5px solid #d1d5db; padding: 0.4rem 1.8rem 0.4rem 0.75rem; outline: none; }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -43,7 +45,7 @@
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
                             <th>Usuario (Nombre)</th>
-                            <th>Correo Electrónico</th>
+                            <th>Nombre de Usuario</th>
                             <th class="text-center">Rol Asignado</th>
                             <th class="text-center">Fecha de Creación</th>
                         </tr>
@@ -57,7 +59,7 @@
                                     </div>
                                     {{ $user->name }}
                                 </td>
-                                <td class="px-4 py-3">{{ $user->email }}</td>
+                                <td class="px-4 py-3 font-medium text-gray-700">{{ $user->email }}</td>
                                 <td class="px-4 py-3 text-center">
                                     @if($user->id_rol == 1)
                                         <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-shield-halved mr-1"></i> {{ $user->nombre_rol }}</span>
@@ -85,12 +87,12 @@
                 @csrf
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre Completo *</label>
-                    <input type="text" name="name" required placeholder="Ej. Juan Pérez" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 smooth-transition">
+                    <input type="text" name="name" id="inp_nombre" required pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" title="Solo se permiten letras y espacios" placeholder="Ej. Juan Pérez" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 smooth-transition">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Correo Electrónico *</label>
-                    <input type="email" name="email" required placeholder="ejemplo@ioarr.com" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 smooth-transition">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre de Usuario *</label>
+                    <input type="text" name="email" required placeholder="Ej. jperez" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 smooth-transition">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -123,19 +125,26 @@
         <script>Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: "{{ session('success') }}", showConfirmButton: false, timer: 4000, timerProgressBar: true });</script>
     @endif
     @if($errors->any())
-        <script>Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: "Error al crear el usuario. Revisa los datos.", showConfirmButton: false, timer: 5000, timerProgressBar: true });</script>
+        <script>Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: "{{ $errors->first() }}", showConfirmButton: false, timer: 5000, timerProgressBar: true });</script>
     @endif
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Inicializar DataTables
+            // Inicializar DataTables con textos en español
             new simpleDatatables.DataTable("#tabla-usuarios", {
                 searchable: true, fixedHeight: true,
-                labels: { placeholder: "Buscar usuario...", perPage: "filas por página", noRows: "No hay usuarios registrados", info: "Mostrando {start} a {end} de {rows}" }
+                labels: { placeholder: "Buscar usuario...", perPage: "filas por página", noRows: "No hay usuarios registrados", info: "Mostrando del {start} al {end} de {rows} entradas" }
             });
 
-            // Inicializar Selector de Rol con buscador
             new TomSelect("#inp_rol", { create: false });
+
+            // Bloqueo estricto para que el "Nombre Completo" no admita números ni símbolos en tiempo real
+            const inpNombre = document.getElementById('inp_nombre');
+            if(inpNombre) {
+                inpNombre.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                });
+            }
         });
 
         function abrirModalUsuario() { 

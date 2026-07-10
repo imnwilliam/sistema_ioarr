@@ -4,6 +4,9 @@
 @if(session('error'))
     <script>Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: "{{ session('error') }}", showConfirmButton: false, timer: 5000, timerProgressBar: true });</script>
 @endif
+@if($errors->any())
+    <script>Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: '{{ $errors->first() }}', showConfirmButton: false, timer: 5000, timerProgressBar: true });</script>
+@endif
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -11,6 +14,15 @@
             searchable: true, fixedHeight: true,
             labels: { placeholder: "Buscar perfil...", perPage: "filas", noRows: "No hay roles registrados", info: "{start} a {end} de {rows}" }
         });
+
+        // Evento que bloquea números y símbolos en tiempo real
+        const inpNombre = document.getElementById('inp_nombre');
+        if(inpNombre) {
+            inpNombre.addEventListener('input', function(e) {
+                // Solo permite letras mayúsculas, minúsculas, vocales con tilde, la 'ñ' y espacios.
+                this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+            });
+        }
     });
 
     // LÓGICA DE NEGOCIO: Si eres editor, por lógica debes ser lector.

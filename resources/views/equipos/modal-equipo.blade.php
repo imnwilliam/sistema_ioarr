@@ -37,7 +37,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Tipo de Equipo *</label>
-                    <select name="tipo_equipo" id="inp_tipo" required placeholder="Seleccionar..." class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:border-purple-500">
+                    <select name="tipo_equipo" id="inp_tipo" required placeholder="Seleccionar..." class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-purple-500">
                         <option value="">Seleccionar...</option>
                         @foreach($tipos as $tipo)
                             <option value="{{ $tipo->nombre_tipo }}">{{ $tipo->nombre_tipo }}</option>
@@ -57,14 +57,19 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">N° Expediente</label>
-                    <input type="text" name="expediente" id="inp_expediente" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-purple-500">
+                    <input type="text" name="expediente" id="inp_expediente" inputmode="numeric" pattern="\d*" placeholder="Solo números..." class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-purple-500">
                 </div>
                 
                 <div class="col-span-3">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Añadir Evidencias (PDFs)</label>
-                    <input type="file" name="archivos_evidencia[]" multiple accept=".pdf" class="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-purple-500 bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
-                    <p class="text-[10px] text-gray-400 mt-1">Puedes seleccionar varios archivos a la vez manteniendo presionada la tecla Ctrl.</p>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Añadir Evidencias (PDF, Word, Excel)</label>
+                    <input type="file" name="archivos_evidencia[]" id="file_evidencia" multiple accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-purple-500 bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
+                    <p class="text-[10px] text-gray-400 mt-1">Puedes subir los archivos uno por uno sin que se borren, o seleccionar varios a la vez.</p>
                     
+                    <div id="contenedor-archivos-nuevos" class="hidden mt-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                        <p class="text-xs font-bold text-indigo-600 mb-2 uppercase tracking-wide"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Archivos Listos para Subir</p>
+                        <ul id="lista-archivos-nuevos" class="space-y-1 grid grid-cols-2 gap-2"></ul>
+                    </div>
+
                     <div id="contenedor-archivos" class="hidden mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide"><i class="fa-solid fa-folder-open mr-1"></i> Documentos Previamente Subidos</p>
                         <ul id="lista-archivos-existentes" class="space-y-2 grid grid-cols-2 gap-2"></ul>

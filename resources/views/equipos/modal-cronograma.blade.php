@@ -5,7 +5,17 @@
                 <h3 class="font-bold text-lg"><i class="fa-solid fa-calendar-check mr-2"></i> Cronograma SEACE</h3>
                 <p class="text-xs text-emerald-100 mt-1">Equipo: <span id="lbl_nombre_equipo" class="font-bold uppercase tracking-wide"></span></p>
             </div>
-            <button onclick="cerrarCronograma()" class="text-white hover:text-gray-200 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="exportarPDFCronograma(this)" title="Exportar PDF"
+                    class="btn-exportar bg-white/20 hover:bg-white/30 text-white font-bold text-xs px-3 py-1.5 rounded-lg smooth-transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </button>
+                <button type="button" onclick="exportarExcelCronograma(this)" title="Exportar Excel"
+                    class="btn-exportar bg-white/20 hover:bg-white/30 text-white font-bold text-xs px-3 py-1.5 rounded-lg smooth-transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
+                <button onclick="cerrarCronograma()" class="text-white hover:text-gray-200 transition-colors ml-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
         </div>
         
         <form action="{{ route('cronogramas.store') }}" method="POST" class="flex flex-col overflow-hidden" onsubmit="mostrarSpinner(this, 'btn-guardar-crono')">
@@ -13,7 +23,7 @@
             <input type="hidden" name="id_equipo" id="crono_id_equipo">
             
             <div class="p-6 overflow-y-auto bg-gray-50 flex-1">
-                <table class="min-w-full text-sm text-left border border-gray-200 rounded-xl bg-white shadow-sm">
+                <table id="tabla-cronograma-modal" class="min-w-full text-sm text-left border border-gray-200 rounded-xl bg-white shadow-sm">
                     <thead class="bg-slate-100 border-b border-gray-200 text-slate-700 uppercase text-[10px] font-extrabold tracking-wider">
                         <tr>
                             <th class="px-4 py-3">Etapa del Proceso</th>

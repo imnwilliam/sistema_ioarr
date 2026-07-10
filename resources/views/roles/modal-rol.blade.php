@@ -12,7 +12,7 @@
             <div class="grid grid-cols-2 gap-5 bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <div class="col-span-1">
                     <label class="block text-sm font-bold text-gray-700 mb-1">Nombre del Rol *</label>
-                    <input type="text" name="nombre_rol" id="inp_nombre" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 smooth-transition" placeholder="Ej: Especialista de Equipos">
+                    <input type="text" name="nombre_rol" id="inp_nombre" required pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" title="Solo se permiten letras y espacios" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 smooth-transition" placeholder="Ej: Especialista de Equipos">
                 </div>
                 <div class="col-span-1">
                     <label class="block text-sm font-bold text-gray-700 mb-1">Descripción</label>

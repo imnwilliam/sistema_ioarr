@@ -17,12 +17,22 @@ class ConfiguracionController extends Controller
 
     public function storeArea(Request $request)
     {
+        // Validación de backend: máximo 100 caracteres
+        $request->validate([
+            'nombre_upss' => 'required|string|max:100'
+        ]);
+
         DB::table('areas_upss')->insert(['nombre_upss' => $request->nombre_upss]);
         return redirect('/configuracion')->with('success', 'Área UPSS registrada con éxito.');
     }
 
     public function updateArea(Request $request, $id)
     {
+        // Validación de backend
+        $request->validate([
+            'nombre_upss' => 'required|string|max:100'
+        ]);
+
         DB::table('areas_upss')->where('id', $id)->update(['nombre_upss' => $request->nombre_upss]);
         return redirect('/configuracion')->with('success', 'Área UPSS actualizada.');
     }
@@ -39,12 +49,22 @@ class ConfiguracionController extends Controller
 
     public function storeTipo(Request $request)
     {
+        // Validación de backend: máximo 100 caracteres
+        $request->validate([
+            'nombre_tipo' => 'required|string|max:100'
+        ]);
+
         DB::table('tipos_equipo')->insert(['nombre_tipo' => $request->nombre_tipo]);
         return redirect('/configuracion')->with('success', 'Tipo de equipo registrado.');
     }
 
     public function updateTipo(Request $request, $id)
     {
+        // Validación de backend
+        $request->validate([
+            'nombre_tipo' => 'required|string|max:100'
+        ]);
+
         DB::table('tipos_equipo')->where('id', $id)->update(['nombre_tipo' => $request->nombre_tipo]);
         return redirect('/configuracion')->with('success', 'Tipo de equipo actualizado.');
     }

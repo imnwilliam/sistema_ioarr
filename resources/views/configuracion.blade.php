@@ -14,7 +14,26 @@
     <style> 
         body { font-family: 'Inter', sans-serif; } 
         .smooth-transition { transition: all 0.3s ease; }
-        .dataTable-input { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.4rem 0.8rem; outline: none; font-size: 0.875rem; }
+
+        /* DISEÑO ELEGANTE PARA EL BUSCADOR */
+        .datatable-top, .dataTable-top { padding-bottom: 1rem; }
+        
+        .datatable-input, .dataTable-input { 
+            border-radius: 0.5rem !important; 
+            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            padding: 0.5rem 0.75rem !important; 
+            outline: none !important; 
+            color: #374151 !important;
+            background-color: #ffffff !important;
+            transition: all 0.25s ease;
+        }
+        .datatable-input:hover, .dataTable-input:hover {
+            border-color: #9ca3af !important; 
+        }
+        .datatable-input:focus, .dataTable-input:focus { 
+            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -94,7 +113,8 @@
                 <div id="modal-method"></div>
                 <div>
                     <label id="modal-label" class="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
-                    <input type="text" name="" id="modal-input" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-1">
+                    <input type="text" name="" id="modal-input" maxlength="100" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-1">
+                    <p class="text-[10px] text-gray-400 mt-1 text-right">Máximo 100 caracteres</p>
                 </div>
                 <div class="flex justify-end space-x-2 pt-2 border-t">
                     <button type="button" onclick="cerrarModal()" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">Cancelar</button>
@@ -110,11 +130,28 @@
     @if(session('error'))
         <script>Swal.fire({ icon: 'error', title: 'Operación denegada', text: "{{ session('error') }}", confirmButtonColor: '#3b82f6' });</script>
     @endif
+    @if($errors->any())
+        <script>Swal.fire({ icon: 'error', title: 'Error de validación', text: '{{ $errors->first() }}', confirmButtonColor: '#3b82f6' });</script>
+    @endif
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            new simpleDatatables.DataTable("#tabla-areas", { searchable: true, perPageSelect: false, perPage: 5 });
-            new simpleDatatables.DataTable("#tabla-tipos", { searchable: true, perPageSelect: false, perPage: 5 });
+            // Objeto de configuración común con traducción y altura fija
+            const dtConfig = {
+                searchable: true,
+                perPageSelect: false,
+                perPage: 5,
+                fixedHeight: true, // Esto obliga a que la tabla respete el espacio de 5 elementos así haya menos
+                labels: {
+                    placeholder: "Buscar...",
+                    perPage: "entradas por página",
+                    noRows: "No hay registros encontrados",
+                    info: "Mostrando del {start} al {end} de {rows}"
+                }
+            };
+
+            new simpleDatatables.DataTable("#tabla-areas", dtConfig);
+            new simpleDatatables.DataTable("#tabla-tipos", dtConfig);
         });
 
         function abrirModalCatalogo(tipo) {

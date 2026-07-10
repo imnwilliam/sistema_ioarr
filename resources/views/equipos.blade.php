@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
     <style> 
         body { font-family: 'Inter', sans-serif; } 
@@ -64,35 +67,26 @@
             color: #1d4ed8 !important;
         }
 
-        /* ---------------------------------------------------
-           DISEÑO ELEGANTE (Borde suave tipo relieve)
-           --------------------------------------------------- */
-        .datatable-top, .dataTable-top {
-            padding-bottom: 1rem;
-        }
+        .datatable-top, .dataTable-top { padding-bottom: 1rem; }
         
-        /* Buscador */
         .datatable-input, .dataTable-input { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important; 
             padding: 0.5rem 0.75rem !important; 
             outline: none !important; 
             color: #374151 !important;
             background-color: #ffffff !important;
             transition: all 0.25s ease;
         }
-        .datatable-input:hover, .dataTable-input:hover {
-            border-color: #9ca3af !important; /* Se oscurece ligeramente al pasar el mouse */
-        }
+        .datatable-input:hover, .dataTable-input:hover { border-color: #9ca3af !important; }
         .datatable-input:focus, .dataTable-input:focus { 
-            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            border-color: #3b82f6 !important; 
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
         }
 
-        /* Selector de cantidad (10, 25, 50...) */
         .datatable-selector, .dataTable-selector { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important; 
             padding: 0.4rem 1.8rem 0.4rem 0.75rem !important; 
             outline: none !important;
             color: #374151 !important;
@@ -100,12 +94,15 @@
             cursor: pointer;
             transition: all 0.25s ease;
         }
-        .datatable-selector:hover, .datatable-selector:hover {
-            border-color: #9ca3af !important;
-        }
+        .datatable-selector:hover, .datatable-selector:hover { border-color: #9ca3af !important; }
         .datatable-selector:focus, .dataTable-selector:focus { 
             border-color: #3b82f6 !important; 
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        .btn-exportar:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -114,9 +111,14 @@
     @include('includes.sidebar')
 
     <main class="flex-1 flex flex-col overflow-y-auto relative">
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10 shadow-sm">
+        
+        <header class="h-20 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-30 shadow-sm">
             <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-microscope text-purple-600 mr-2"></i> Gestión de Equipos</h2>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <button onclick="exportarPDFEquipos(this)" 
+                    class="btn-exportar bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm smooth-transition">
+                    <i class="fa-solid fa-file-pdf mr-2"></i> Exportar PDF
+                </button>
                 <a href="{{ route('equipos.exportar', request()->all()) }}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm smooth-transition">
                     <i class="fa-solid fa-file-excel mr-2"></i> Exportar
                 </a>
@@ -127,8 +129,7 @@
         </header>
 
         <div class="p-8">
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 relative z-20">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center rounded-t-2xl">
                     <h3 class="font-bold text-gray-700"><i class="fa-solid fa-filter mr-2 text-blue-500"></i> Filtros de Búsqueda</h3>
                 </div>
@@ -173,7 +174,7 @@
 
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">N° Expediente</label>
-                            <input type="text" name="filtro_expediente" value="{{ request('filtro_expediente') }}" placeholder="Buscar N°..." class="w-full border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500 text-sm h-[42px] text-gray-700">
+                            <input type="text" name="filtro_expediente" id="filtro_expediente_inp" inputmode="numeric" pattern="\d*" value="{{ request('filtro_expediente') }}" placeholder="Buscar N°..." class="w-full border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500 text-sm h-[42px] text-gray-700">
                         </div>
 
                         <div class="flex gap-2">
@@ -188,7 +189,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-4 relative z-10">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-4">
                 <table id="tabla-equipos" class="min-w-full text-sm text-left text-gray-600">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
@@ -236,8 +237,15 @@
                                     @if(count($archivos) > 0)
                                         <div class="flex flex-col gap-1 items-center">
                                             @foreach($archivos as $idx => $ruta)
+                                                @php
+                                                    $ext = strtolower(pathinfo($ruta, PATHINFO_EXTENSION));
+                                                    $icon = 'fa-file text-gray-500';
+                                                    if($ext == 'pdf') $icon = 'fa-file-pdf text-red-500';
+                                                    elseif(in_array($ext, ['xls','xlsx'])) $icon = 'fa-file-excel text-green-500';
+                                                    elseif(in_array($ext, ['doc','docx'])) $icon = 'fa-file-word text-blue-500';
+                                                @endphp
                                                 <a href="{{ asset('storage/'.$ruta) }}" target="_blank" class="text-blue-600 hover:bg-blue-100 px-2 py-1 rounded smooth-transition text-xs font-semibold whitespace-nowrap" title="Ver Documento">
-                                                    <i class="fa-solid fa-file-pdf mr-1"></i> Doc {{ $idx + 1 }}
+                                                    <i class="fa-solid {{ $icon }} mr-1"></i> Doc {{ $idx + 1 }}
                                                 </a>
                                             @endforeach
                                         </div>
@@ -278,7 +286,6 @@
                             <td colspan="2" class="px-4 py-4"></td>
                         </tr>
                     </tfoot>
-
                 </table>
             </div>
         </div>

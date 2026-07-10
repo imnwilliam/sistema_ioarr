@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style> 
         body { font-family: 'Inter', sans-serif; } 
@@ -25,7 +26,7 @@
         /* Buscador */
         .datatable-input, .dataTable-input { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important;
             padding: 0.5rem 0.75rem !important; 
             outline: none !important; 
             color: #374151 !important;
@@ -33,17 +34,17 @@
             transition: all 0.25s ease;
         }
         .datatable-input:hover, .dataTable-input:hover {
-            border-color: #9ca3af !important; /* Se oscurece ligeramente al pasar el mouse */
+            border-color: #9ca3af !important;
         }
         .datatable-input:focus, .dataTable-input:focus { 
-            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            border-color: #3b82f6 !important;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
         }
 
         /* Selector de cantidad (10, 25, 50...) */
         .datatable-selector, .dataTable-selector { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important;
             padding: 0.4rem 1.8rem 0.4rem 0.75rem !important; 
             outline: none !important;
             color: #374151 !important;
@@ -57,6 +58,12 @@
         .datatable-selector:focus, .dataTable-selector:focus { 
             border-color: #3b82f6 !important; 
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        /* Estado de carga del botón exportar */
+        .btn-exportar:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -80,27 +87,35 @@
                 $ultimaMod = \Illuminate\Support\Facades\Cache::get('ultima_modificacion');
             @endphp
 
-            <div class="hidden md:flex bg-blue-50/80 border border-blue-100 rounded-xl px-5 py-2.5 items-center shadow-sm">
-                <div class="bg-blue-600 text-white rounded-lg w-10 h-10 flex items-center justify-center mr-3 shadow-md">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-0.5">Última Modificación</span>
-                    @if($ultimaMod)
-                        <span class="text-sm font-black text-slate-800 leading-none">
-                            {{ \Carbon\Carbon::parse($ultimaMod['fecha'])->format('d/m/Y - h:i A') }}
-                        </span>
-                        <span class="text-[10px] text-slate-500 font-medium mt-1 truncate max-w-[150px]" title="{{ $ultimaMod['usuario'] }}">
-                            Por: <span class="font-bold text-blue-700">{{ $ultimaMod['usuario'] }}</span>
-                        </span>
-                    @else
-                        <span class="text-sm font-bold text-slate-400">Sin actividad reciente</span>
-                    @endif
+            <div class="flex items-center gap-3">
+                <button onclick="exportarPDFGeneral(this)" 
+                    class="btn-exportar flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-md shadow-red-500/30 transition-all">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Exportar PDF</span>
+                </button>
+
+                <div class="hidden md:flex bg-blue-50/80 border border-blue-100 rounded-xl px-5 py-2.5 items-center shadow-sm">
+                    <div class="bg-blue-600 text-white rounded-lg w-10 h-10 flex items-center justify-center mr-3 shadow-md">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-0.5">Última Modificación</span>
+                        @if($ultimaMod)
+                            <span class="text-sm font-black text-slate-800 leading-none">
+                                {{ \Carbon\Carbon::parse($ultimaMod['fecha'])->format('d/m/Y - h:i A') }}
+                            </span>
+                            <span class="text-[10px] text-slate-500 font-medium mt-1 truncate max-w-[150px]" title="{{ $ultimaMod['usuario'] }}">
+                                Por: <span class="font-bold text-blue-700">{{ $ultimaMod['usuario'] }}</span>
+                            </span>
+                        @else
+                            <span class="text-sm font-bold text-slate-400">Sin actividad reciente</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </header>
 
-        <div class="p-8 space-y-8">
+        <div class="p-8 space-y-8" id="contenido-dashboard">
             
             @php
                 $totalPim = $financiera->total_pim ?? 0;
@@ -218,7 +233,13 @@
             <div id="panel-detalle" class="hidden bg-slate-900 rounded-2xl shadow-xl overflow-hidden smooth-transition mt-6">
                 <div class="p-4 bg-blue-600 flex justify-between items-center text-white">
                     <h3 class="font-bold"><i class="fa-solid fa-microscope mr-2"></i> Detalle de Equipos: <span id="lbl-cui" class="text-blue-200"></span></h3>
-                    <button onclick="cerrarDetalle()" class="text-white hover:text-gray-200 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    <div class="flex items-center gap-3">
+                        <button id="btn-exportar-detalle" onclick="exportarPDFDetalle(this)"
+                            class="btn-exportar flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all">
+                            <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+                        </button>
+                        <button onclick="cerrarDetalle()" class="text-white hover:text-gray-200 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
                 </div>
                 <div class="p-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -294,194 +315,332 @@
 
     <script>
         // --- 1. Inicializar la tabla financiera con Datatables ---
-        document.addEventListener("DOMContentLoaded", function() {
-            new simpleDatatables.DataTable("#tabla-financiera", {
-                searchable: true,
-                perPage: 10,
-                perPageSelect: [10, 15, 25, 50, 100],
-                labels: { 
-                    placeholder: "Buscar CUI...", 
-                    perPage: "filas por pág.", 
-                    noRows: "No hay registros financieros.", 
-                    info: "{start} a {end} de {rows}" 
-                }
-            });
-        });
+let tablaFinanciera = null;
+document.addEventListener("DOMContentLoaded", function() {
+    tablaFinanciera = new simpleDatatables.DataTable("#tabla-financiera", {
+        searchable: true,
+        perPage: 10,
+        perPageSelect: [10, 15, 25, 50, 100],
+        labels: { 
+            placeholder: "Buscar CUI...", 
+            perPage: "filas por pág.", 
+            noRows: "No hay registros financieros.", 
+            info: "{start} a {end} de {rows}" 
+        }
+    });
+});
 
-        const allInvDatos = @json($inversionesMontos);
-        const areasDatos = @json($equiposPorArea);
-        let chartTipos = null; 
-        
-        // --- 2. Lógica del Gráfico de Barras con Paginación ---
-        let filteredInvDatos = [...allInvDatos];
-        let currentChartPage = 0;
-        const chartPageSize = 5; // Mostrar 5 barras máximo
-        let currentChartItems = [];
-        let chartInversionesObj = null;
+const allInvDatos = @json($inversionesMontos);
+const areasDatos = @json($equiposPorArea);
+let chartTipos = null; 
 
-        function renderChart() {
-            const start = currentChartPage * chartPageSize;
-            currentChartItems = filteredInvDatos.slice(start, start + chartPageSize);
+// Guardamos el último detalle cargado para poder exportarlo sin depender del DOM clonado
+let ultimoEquiposDetalle = [];
+let ultimoCuiDetalle = '';
 
-            const invLabels = currentChartItems.map(i => i.cui);
-            const invMontos = currentChartItems.map(i => i.monto_total);
+// --- 2. Lógica del Gráfico de Barras con Paginación ---
+let filteredInvDatos = [...allInvDatos];
+let currentChartPage = 0;
+const chartPageSize = 5;
+let currentChartItems = [];
+let chartInversionesObj = null;
 
-            if(!chartInversionesObj) {
-                const optionsInv = {
-                    chart: { 
-                        type: 'bar', height: 350, fontFamily: 'Inter, sans-serif', toolbar: { show: false },
-                        events: {
-                            dataPointSelection: function(event, chartContext, config) {
-                                const seleccionados = config.selectedDataPoints[0];
-                                if (seleccionados.length === 0) {
-                                    cerrarDetalle();
-                                } else {
-                                    // Utilizamos currentChartItems para obtener el CUI correcto según la página actual
-                                    const index = config.dataPointIndex;
-                                    cargarDetalleEquipos(currentChartItems[index].id, currentChartItems[index].cui);
-                                }
-                            }
+function renderChart() {
+    const start = currentChartPage * chartPageSize;
+    currentChartItems = filteredInvDatos.slice(start, start + chartPageSize);
+
+    const invLabels = currentChartItems.map(i => i.cui);
+    const invMontos = currentChartItems.map(i => i.monto_total);
+
+    if(!chartInversionesObj) {
+        const optionsInv = {
+            chart: { 
+                type: 'bar', height: 350, fontFamily: 'Inter, sans-serif', toolbar: { show: false },
+                events: {
+                    dataPointSelection: function(event, chartContext, config) {
+                        const seleccionados = config.selectedDataPoints[0];
+                        if (seleccionados.length === 0) {
+                            cerrarDetalle();
+                        } else {
+                            const index = config.dataPointIndex;
+                            cargarDetalleEquipos(currentChartItems[index].id, currentChartItems[index].cui);
                         }
-                    },
-                    series: [{ name: 'Monto Equipamiento (S/)', data: invMontos }],
-                    xaxis: { categories: invLabels, title: { text: 'Códigos CUI (IOARR)', style: { fontWeight: 600, color: '#64748b' } } },
-                    colors: ['#3b82f6'],
-                    plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '40%', dataLabels: { position: 'top' } } },
-                    dataLabels: { 
-                        enabled: true, 
-                        formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); },
-                        offsetY: -20, 
-                        style: { fontSize: '12px', colors: ["#304758"] }
-                    },
-                    tooltip: { 
-                        theme: 'light',
-                        y: { formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); } } 
                     }
-                };
-                chartInversionesObj = new ApexCharts(document.querySelector("#chart-inversiones"), optionsInv);
-                chartInversionesObj.render();
-            } else {
-                chartInversionesObj.updateOptions({ xaxis: { categories: invLabels } });
-                chartInversionesObj.updateSeries([{ data: invMontos }]);
-            }
-            updateChartControls();
-        }
-
-        // Control de los botones < y >
-        function updateChartControls() {
-            document.getElementById('btn-prev-chart').disabled = currentChartPage === 0;
-            document.getElementById('btn-next-chart').disabled = (currentChartPage + 1) * chartPageSize >= filteredInvDatos.length;
-        }
-        function prevChartPage() { if(currentChartPage > 0) { currentChartPage--; renderChart(); } }
-        function nextChartPage() { if((currentChartPage + 1) * chartPageSize < filteredInvDatos.length) { currentChartPage++; renderChart(); } }
-
-        // Buscador interactivo del gráfico
-        document.getElementById('buscador-grafico').addEventListener('input', function(e) {
-            const term = e.target.value.toLowerCase();
-            filteredInvDatos = allInvDatos.filter(i => i.cui.toLowerCase().includes(term));
-            currentChartPage = 0;
-            renderChart();
-        });
-
-        // Llamada inicial para pintar el gráfico
-        renderChart();
-
-
-        // --- 3. Gráfico 2: Áreas (Pie Chart) ---
-        let chartAreasObj = null; 
-        const optionsAreas = {
-            chart: { type: 'donut', height: 350, fontFamily: 'Inter, sans-serif' },
-            series: areasDatos.map(a => a.cantidad),
-            labels: areasDatos.map(a => a.nombre_upss),
-            colors: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
-            plotOptions: { pie: { donut: { size: '65%' } } },
-            dataLabels: { 
-                enabled: true,
-                formatter: function (val) { return val.toFixed(1) + "%"; },
-                dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 }
+                }
             },
-            legend: { position: 'bottom', markers: { radius: 12 } }
+            series: [{ name: 'Monto Equipamiento (S/)', data: invMontos }],
+            xaxis: { categories: invLabels, title: { text: 'Códigos CUI (IOARR)', style: { fontWeight: 600, color: '#64748b' } } },
+            colors: ['#3b82f6'],
+            plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '40%', dataLabels: { position: 'top' } } },
+            dataLabels: { 
+                enabled: true, 
+                formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); },
+                offsetY: -20, 
+                style: { fontSize: '12px', colors: ["#304758"] }
+            },
+            tooltip: { 
+                theme: 'light',
+                y: { formatter: function (val) { return "S/ " + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2}); } } 
+            }
         };
-        chartAreasObj = new ApexCharts(document.querySelector("#chart-areas"), optionsAreas);
-        chartAreasObj.render();
+        chartInversionesObj = new ApexCharts(document.querySelector("#chart-inversiones"), optionsInv);
+        chartInversionesObj.render();
+    } else {
+        chartInversionesObj.updateOptions({ xaxis: { categories: invLabels } });
+        chartInversionesObj.updateSeries([{ data: invMontos }]);
+    }
+    updateChartControls();
+}
+
+function updateChartControls() {
+    document.getElementById('btn-prev-chart').disabled = currentChartPage === 0;
+    document.getElementById('btn-next-chart').disabled = (currentChartPage + 1) * chartPageSize >= filteredInvDatos.length;
+}
+function prevChartPage() { if(currentChartPage > 0) { currentChartPage--; renderChart(); } }
+function nextChartPage() { if((currentChartPage + 1) * chartPageSize < filteredInvDatos.length) { currentChartPage++; renderChart(); } }
+
+document.getElementById('buscador-grafico').addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    filteredInvDatos = allInvDatos.filter(i => i.cui.toLowerCase().includes(term));
+    currentChartPage = 0;
+    renderChart();
+});
+
+renderChart();
 
 
-        // --- 4. LÓGICA DEL DRILL-DOWN (AJAX) ---
-        function cargarDetalleEquipos(idInversion, cui) {
-            document.getElementById('lbl-cui').innerText = cui;
-            document.getElementById('panel-detalle').classList.remove('hidden');
+// --- 3. Gráfico 2: Áreas (Pie Chart) ---
+let chartAreasObj = null; 
+const optionsAreas = {
+    chart: { type: 'donut', height: 350, fontFamily: 'Inter, sans-serif' },
+    series: areasDatos.map(a => a.cantidad),
+    labels: areasDatos.map(a => a.nombre_upss),
+    colors: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
+    plotOptions: { pie: { donut: { size: '65%' } } },
+    dataLabels: { 
+        enabled: true,
+        formatter: function (val) { return val.toFixed(1) + "%"; },
+        dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 }
+    },
+        legend: { position: 'bottom', markers: { radius: 12 } }
+    };
+    chartAreasObj = new ApexCharts(document.querySelector("#chart-areas"), optionsAreas);
+    chartAreasObj.render();
+
+
+    // --- 4. LÓGICA DEL DRILL-DOWN (AJAX) ---
+    function cargarDetalleEquipos(idInversion, cui) {
+    document.getElementById('lbl-cui').innerText = cui;
+    document.getElementById('panel-detalle').classList.remove('hidden');
+    
+    fetch(`/api/inversiones/${idInversion}/equipos`)
+        .then(response => response.json())
+        .then(equipos => {
+            // Guardamos para poder exportar luego sin depender del DOM
+            ultimoEquiposDetalle = equipos;
+            ultimoCuiDetalle = cui;
+
+            const tbody = document.getElementById('tabla-detalle-body');
+            tbody.innerHTML = '';
             
-            fetch(`/api/inversiones/${idInversion}/equipos`)
-                .then(response => response.json())
-                .then(equipos => {
-                    const tbody = document.getElementById('tabla-detalle-body');
-                    tbody.innerHTML = '';
+            if(equipos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium">No hay equipos registrados en esta inversión.</td></tr>';
+            } else {
+                equipos.forEach(eq => {
+                    const precioUnitario = parseFloat(eq.precio_unitario);
+                    const precioTotal = eq.cantidad * precioUnitario;
                     
-                    if(equipos.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 font-medium">No hay equipos registrados en esta inversión.</td></tr>';
-                    } else {
-                        equipos.forEach(eq => {
-                            const precioUnitario = parseFloat(eq.precio_unitario);
-                            const precioTotal = eq.cantidad * precioUnitario;
-                            
-                            tbody.innerHTML += `
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-4 py-3 font-semibold text-slate-800">${eq.nombre_equipo}</td>
-                                    <td class="px-4 py-3"><span class="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded font-medium">${eq.nombre_upss || 'Sin área'}</span></td>
-                                    <td class="px-4 py-3 text-center font-bold text-slate-700">${eq.cantidad}</td>
-                                    <td class="px-4 py-3 text-right font-medium text-slate-700">S/ ${precioUnitario.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                    <td class="px-4 py-3 text-right font-bold text-blue-600">S/ ${precioTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                </tr>
-                            `;
-                        });
-                    }
-
-                    const conteoEquipos = {};
-                    equipos.forEach(eq => {
-                        conteoEquipos[eq.nombre_equipo] = (conteoEquipos[eq.nombre_equipo] || 0) + eq.cantidad;
-                    });
-
-                    if(chartTipos) { chartTipos.destroy(); } 
-
-                    const alturaDinamica = Math.max(260, Object.keys(conteoEquipos).length * 45);
-
-                    const optionsTipos = {
-                        chart: { type: 'bar', height: alturaDinamica, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-                        series: [{ name: 'Cantidad', data: Object.values(conteoEquipos) }],
-                        xaxis: { categories: Object.keys(conteoEquipos) },
-                        colors: ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'],
-                        plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true, barHeight: '60%' } },
-                        dataLabels: { enabled: true, textAnchor: 'start', style: { fontSize: '12px', colors: ['#fff'] }, offsetX: 10 },
-                        legend: { show: false }, 
-                        tooltip: { theme: 'light' }
-                    };
-                    
-                    chartTipos = new ApexCharts(document.querySelector("#chart-detalle-tipos"), optionsTipos);
-                    chartTipos.render();
-
-                    const conteoAreasCUI = {};
-                    equipos.forEach(eq => {
-                        const area = eq.nombre_upss || 'Sin área';
-                        conteoAreasCUI[area] = (conteoAreasCUI[area] || 0) + eq.cantidad;
-                    });
-
-                    if(Object.keys(conteoAreasCUI).length > 0) {
-                        chartAreasObj.updateOptions({ labels: Object.keys(conteoAreasCUI) });
-                        chartAreasObj.updateSeries(Object.values(conteoAreasCUI));
-                        document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> Áreas del CUI: ${cui}`;
-                    } else {
-                        chartAreasObj.updateOptions({ labels: ['Sin Equipos'] });
-                        chartAreasObj.updateSeries([1]); 
-                    }
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3 font-semibold text-slate-800">${eq.nombre_equipo}</td>
+                            <td class="px-4 py-3"><span class="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded font-medium">${eq.nombre_upss || 'Sin área'}</span></td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-700">${eq.cantidad}</td>
+                            <td class="px-4 py-3 text-right font-medium text-slate-700">S/ ${precioUnitario.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                            <td class="px-4 py-3 text-right font-bold text-blue-600">S/ ${precioTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    `;
                 });
+            }
+
+            const conteoEquipos = {};
+            equipos.forEach(eq => {
+                conteoEquipos[eq.nombre_equipo] = (conteoEquipos[eq.nombre_equipo] || 0) + eq.cantidad;
+            });
+
+            if(chartTipos) { chartTipos.destroy(); } 
+
+            const alturaDinamica = Math.max(260, Object.keys(conteoEquipos).length * 45);
+
+            const optionsTipos = {
+                chart: { type: 'bar', height: alturaDinamica, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
+                series: [{ name: 'Cantidad', data: Object.values(conteoEquipos) }],
+                xaxis: { categories: Object.keys(conteoEquipos) },
+                colors: ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'],
+                plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true, barHeight: '60%' } },
+                dataLabels: { enabled: true, textAnchor: 'start', style: { fontSize: '12px', colors: ['#fff'] }, offsetX: 10 },
+                legend: { show: false }, 
+                tooltip: { theme: 'light' }
+            };
+            
+            chartTipos = new ApexCharts(document.querySelector("#chart-detalle-tipos"), optionsTipos);
+            chartTipos.render();
+
+            const conteoAreasCUI = {};
+            equipos.forEach(eq => {
+                const area = eq.nombre_upss || 'Sin área';
+                conteoAreasCUI[area] = (conteoAreasCUI[area] || 0) + eq.cantidad;
+            });
+
+            if(Object.keys(conteoAreasCUI).length > 0) {
+                chartAreasObj.updateOptions({ labels: Object.keys(conteoAreasCUI) });
+                chartAreasObj.updateSeries(Object.values(conteoAreasCUI));
+                document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> Áreas del CUI: ${cui}`;
+            } else {
+                chartAreasObj.updateOptions({ labels: ['Sin Equipos'] });
+                chartAreasObj.updateSeries([1]); 
+            }
+            });
         }
 
-        function cerrarDetalle() {
-            document.getElementById('panel-detalle').classList.add('hidden');
-            chartAreasObj.updateOptions({ labels: areasDatos.map(a => a.nombre_upss) });
-            chartAreasObj.updateSeries(areasDatos.map(a => a.cantidad));
-            document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-chart-donut text-purple-500 mr-2"></i> Distribución Global por Áreas`;
+    function cerrarDetalle() {
+    document.getElementById('panel-detalle').classList.add('hidden');
+    chartAreasObj.updateOptions({ labels: areasDatos.map(a => a.nombre_upss) });
+    chartAreasObj.updateSeries(areasDatos.map(a => a.cantidad));
+    document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-chart-donut text-purple-500 mr-2"></i> Distribución Global por Áreas`;
+    }
+
+    // --- 5. EXPORTAR PDF ---
+
+    function fechaArchivo() {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function ponerBotonCargando(boton, cargando) {
+        if (cargando) {
+        boton.dataset.original = boton.innerHTML;
+        boton.disabled = true;
+        boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Generando...</span>';
+        } else {
+        boton.disabled = false;
+        boton.innerHTML = boton.dataset.original;
         }
+    }
+
+    // Exportar TODO el dashboard
+    function exportarPDFGeneral(boton) {
+    ponerBotonCargando(boton, true);
+
+    const perPageOriginal = tablaFinanciera.options.perPage;
+    const totalFilas = tablaFinanciera.data.data.length;
+    tablaFinanciera.options.perPage = totalFilas;
+    tablaFinanciera.update();
+
+    const elemento = document.getElementById('contenido-dashboard');
+
+        const opciones = {
+        margin: 0.4,
+        filename: `Dashboard_IOARR_${fechaArchivo()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        html2pdf().set(opciones).from(elemento).save().then(() => {
+        tablaFinanciera.options.perPage = perPageOriginal;
+        tablaFinanciera.update();
+        ponerBotonCargando(boton, false);
+        });
+    }
+
+    // Exportar solo el detalle de una inversión (tabla + gráfico pastel filtrado)
+    // Reconstruye el reporte desde los datos (no clona el DOM) para evitar
+    // conflictos de IDs de ApexCharts y el problema del PDF en blanco.
+    function exportarPDFDetalle(boton) {
+    if (!ultimoCuiDetalle) return;
+    ponerBotonCargando(boton, true);
+
+    const conteoAreasCUI = {};
+    ultimoEquiposDetalle.forEach(eq => {
+        const area = eq.nombre_upss || 'Sin área';
+        conteoAreasCUI[area] = (conteoAreasCUI[area] || 0) + eq.cantidad;
+    });
+
+    let filasHTML = '';
+    if (ultimoEquiposDetalle.length === 0) {
+        filasHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:#6b7280;">No hay equipos registrados en esta inversión.</td></tr>';
+    } else {
+        ultimoEquiposDetalle.forEach(eq => {
+            const precioUnitario = parseFloat(eq.precio_unitario);
+            const precioTotal = eq.cantidad * precioUnitario;
+            filasHTML += `
+                <tr>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#1e293b;">${eq.nombre_equipo}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#475569;">${eq.nombre_upss || 'Sin área'}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#1e293b;">${eq.cantidad}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#1e293b;">S/ ${precioUnitario.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#2563eb;">S/ ${precioTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                </tr>`;
+        });
+    }
+
+    // Overlay visible (sirve además como "vista previa generando PDF")
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); z-index:99999; display:flex; justify-content:center; align-items:flex-start; overflow:auto; padding:40px;';
+
+    const reporte = document.createElement('div');
+    reporte.style.cssText = 'width:1000px; max-width:100%; background:#fff; padding:28px; border-radius:12px; font-family:Inter,sans-serif;';
+    reporte.innerHTML = `
+        <h2 style="font-size:20px;font-weight:900;margin-bottom:16px;color:#1e293b;">Detalle de Inversión - ${ultimoCuiDetalle}</h2>
+        <div id="pdf-chart-areas" style="margin-bottom:24px;border:1px solid #f1f5f9;border-radius:12px;padding:16px;"></div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="background:#f9fafb;">
+                    <th style="padding:8px 12px;text-align:left;color:#374151;">Equipo</th>
+                    <th style="padding:8px 12px;text-align:left;color:#374151;">Área</th>
+                    <th style="padding:8px 12px;text-align:center;color:#374151;">Cant.</th>
+                    <th style="padding:8px 12px;text-align:right;color:#374151;">Precio Unit.</th>
+                    <th style="padding:8px 12px;text-align:right;color:#374151;">Precio Total</th>
+                </tr>
+            </thead>
+            <tbody>${filasHTML}</tbody>
+        </table>
+    `;
+    overlay.appendChild(reporte);
+    document.body.appendChild(overlay);
+
+    // Gráfico NUEVO e independiente (evita choque de IDs con el original)
+    const chartExport = new ApexCharts(reporte.querySelector('#pdf-chart-areas'), {
+        chart: { type: 'donut', height: 320, fontFamily: 'Inter, sans-serif', animations: { enabled: false } },
+        series: Object.values(conteoAreasCUI).length ? Object.values(conteoAreasCUI) : [1],
+        labels: Object.keys(conteoAreasCUI).length ? Object.keys(conteoAreasCUI) : ['Sin Equipos'],
+        colors: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
+        plotOptions: { pie: { donut: { size: '65%' } } },
+        dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + '%' },
+        legend: { position: 'bottom' }
+    });
+
+    chartExport.render().then(() => {
+        // Pequeño respiro para que el SVG termine de pintarse antes de capturar
+        setTimeout(() => {
+            const opciones = {
+                margin: 0.4,
+                filename: `Detalle_${ultimoCuiDetalle}_${fechaArchivo()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opciones).from(reporte).save().then(() => {
+                chartExport.destroy();
+                document.body.removeChild(overlay);
+                ponerBotonCargando(boton, false);
+            });
+        }, 300);
+    });
+    }
     </script>
 </body>
 </html>

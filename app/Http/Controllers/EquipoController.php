@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Equipo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\EquiposExport;
 
 class EquipoController extends Controller
 {
@@ -27,7 +29,6 @@ class EquipoController extends Controller
         if ($request->filled('filtro_tipo')) {
             $query->where('equipos.tipo_equipo', $request->filtro_tipo);
         }
-        // NUEVO FILTRO: Número de Expediente
         if ($request->filled('filtro_expediente')) {
             $query->where('equipos.expediente', 'LIKE', '%' . $request->filtro_expediente . '%');
         }
@@ -43,8 +44,47 @@ class EquipoController extends Controller
         return view('equipos', compact('equipos', 'inversiones', 'areas', 'tipos', 'sumaTotal'));
     }
 
+    /**
+     * Reglas de validación compartidas entre store() y update().
+     * Límite de archivo: 3MB (3072 KB) por evidencia.
+     */
+    private function reglasValidacion(): array
+    {
+        return [
+            'id_inversion' => 'nullable|integer|exists:inversiones,id',
+            'id_upss' => 'nullable|integer|exists:areas_upss,id',
+            'expediente' => 'nullable|numeric',
+            'nombre_equipo' => 'required|string|max:255',
+            'tipo_equipo' => 'nullable|string|max:100',
+            'servicio' => 'nullable|string|max:255',
+            'ambiente' => 'nullable|string|max:255',
+            'estado_situacional' => 'nullable|string',
+            'cantidad' => 'required|integer|min:1',
+            'precio_unitario' => 'required|numeric|min:0',
+            'archivos_evidencia' => 'nullable|array',
+            'archivos_evidencia.*' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:3072', // 3MB por archivo
+        ];
+    }
+
+    private function mensajesValidacion(): array
+    {
+        return [
+            'nombre_equipo.required' => 'El nombre del equipo es obligatorio.',
+            'cantidad.required' => 'La cantidad es obligatoria.',
+            'cantidad.min' => 'La cantidad debe ser al menos 1.',
+            'precio_unitario.required' => 'El precio unitario es obligatorio.',
+            'precio_unitario.min' => 'El precio unitario no puede ser negativo.',
+            'id_inversion.exists' => 'La inversión seleccionada no existe.',
+            'id_upss.exists' => 'El área/UPSS seleccionada no existe.',
+            'archivos_evidencia.*.mimes' => 'Cada evidencia debe ser un archivo PDF, Word, Excel o imagen (jpg/png).',
+            'archivos_evidencia.*.max' => 'Cada archivo de evidencia no puede superar los 3MB.',
+        ];
+    }
+
     public function store(Request $request)
     {
+        $request->validate($this->reglasValidacion(), $this->mensajesValidacion());
+
         $equipo = new Equipo();
         $equipo->id_inversion = $request->id_inversion;
         $equipo->id_upss = $request->id_upss;
@@ -73,6 +113,8 @@ class EquipoController extends Controller
 
     public function update(Request $request, $id)
     {
+        $request->validate($this->reglasValidacion(), $this->mensajesValidacion());
+
         $equipoExistente = DB::table('equipos')->where('id', $id)->first();
         
         $archivosExistentes = json_decode($equipoExistente->archivo_evidencia, true);
@@ -142,33 +184,10 @@ class EquipoController extends Controller
 
     public function exportarCSV(Request $request)
     {
-        $query = DB::table('equipos')
-            ->leftJoin('inversiones', 'equipos.id_inversion', '=', 'inversiones.id')
-            ->leftJoin('areas_upss', 'equipos.id_upss', '=', 'areas_upss.id')
-            ->select('equipos.nombre_equipo', 'equipos.tipo_equipo', 'equipos.expediente', 'inversiones.cui', 'areas_upss.nombre_upss', 'equipos.servicio', 'equipos.ambiente', 'equipos.estado_situacional', 'equipos.cantidad', 'equipos.precio_unitario', 'equipos.precio_total')
-            ->whereNull('equipos.deleted_at');
-
-        if ($request->filled('filtro_inversion')) $query->where('equipos.id_inversion', $request->filtro_inversion);
-        if ($request->filled('filtro_upss')) $query->where('equipos.id_upss', $request->filtro_upss);
-        if ($request->filled('filtro_tipo')) $query->where('equipos.tipo_equipo', $request->filtro_tipo);
-        if ($request->filled('filtro_expediente')) $query->where('equipos.expediente', 'LIKE', '%' . $request->filtro_expediente . '%');
-
-        $equipos = $query->get();
-
-        $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d') . ".csv";
-        $headers = [ "Content-type" => "text/csv; charset=UTF-8", "Content-Disposition" => "attachment; filename=$filename", "Pragma" => "no-cache", "Cache-Control" => "must-revalidate, post-check=0, pre-check=0", "Expires" => "0" ];
+        // Generamos el nombre del archivo dinámicamente con la extensión .xlsx
+        $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d_H-i') . ".xlsx";
         
-        // Se añade Expediente a las columnas del Excel
-        $columns = ['Nombre del Equipo', 'Tipo', 'Expediente', 'CUI (Inversion)', 'Area UPSS', 'Servicio', 'Ambiente', 'Estado Situacional', 'Cantidad', 'Precio Unitario', 'Precio Total'];
-
-        $callback = function() use($equipos, $columns) {
-            $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); 
-            fputcsv($file, $columns, ';'); 
-            foreach ($equipos as $eq) { fputcsv($file, [$eq->nombre_equipo, $eq->tipo_equipo, $eq->expediente ?? 'N/A', $eq->cui, $eq->nombre_upss ?? 'Sin área', $eq->servicio, $eq->ambiente, $eq->estado_situacional, $eq->cantidad, $eq->precio_unitario, $eq->precio_total], ';'); }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        // Retornamos la descarga del Excel usando nuestra nueva clase de Diseño
+        return Excel::download(new EquiposExport($request), $filename);
     }
 }

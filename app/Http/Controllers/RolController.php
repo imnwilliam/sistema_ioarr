@@ -22,6 +22,13 @@ class RolController extends Controller
 
     public function store(Request $request)
     {
+        // Validación estricta en el backend: Solo letras y espacios.
+        $request->validate([
+            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
+        ], [
+            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.'
+        ]);
+
         $id_rol = DB::table('roles')->insertGetId([
             'nombre_rol' => $request->nombre_rol,
             'descripcion' => $request->descripcion,
@@ -35,6 +42,13 @@ class RolController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Validación estricta en el backend para la edición.
+        $request->validate([
+            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
+        ], [
+            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.'
+        ]);
+
         DB::table('roles')->where('id', $id)->update([
             'nombre_rol' => $request->nombre_rol,
             'descripcion' => $request->descripcion

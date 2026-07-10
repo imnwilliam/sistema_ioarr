@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style> 
         body { font-family: 'Inter', sans-serif; } 
@@ -24,7 +25,7 @@
         /* Buscador */
         .datatable-input, .dataTable-input { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important;
             padding: 0.5rem 0.75rem !important; 
             outline: none !important; 
             color: #374151 !important;
@@ -32,17 +33,17 @@
             transition: all 0.25s ease;
         }
         .datatable-input:hover, .dataTable-input:hover {
-            border-color: #9ca3af !important; /* Se oscurece ligeramente al pasar el mouse */
+            border-color: #9ca3af !important;
         }
         .datatable-input:focus, .dataTable-input:focus { 
-            border-color: #3b82f6 !important; /* Azul sutil al enfocar */
+            border-color: #3b82f6 !important;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
         }
 
         /* Selector de cantidad (10, 25, 50...) */
         .datatable-selector, .dataTable-selector { 
             border-radius: 0.5rem !important; 
-            border: 1.5px solid #d1d5db !important; /* Gris neutro suave */
+            border: 1.5px solid #d1d5db !important;
             padding: 0.4rem 1.8rem 0.4rem 0.75rem !important; 
             outline: none !important;
             color: #374151 !important;
@@ -57,6 +58,11 @@
             border-color: #3b82f6 !important; 
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
         }
+
+        .btn-exportar:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -66,11 +72,18 @@
     <main class="flex-1 flex flex-col overflow-y-auto relative">
         <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10 shadow-sm">
             <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-folder-tree text-blue-600 mr-2"></i> Gestión de Inversiones</h2>
-            @if(auth()->user()->id_rol == 1)
-                <button onclick="abrirModalInversion()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm smooth-transition">
-                    <i class="fa-solid fa-plus mr-2"></i> Nuevo IOARR
+            <div class="flex items-center gap-3">
+                <button onclick="exportarPDFInversiones(this)" 
+                    class="btn-exportar flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2 px-4 rounded-lg shadow-sm smooth-transition">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Exportar PDF</span>
                 </button>
-            @endif
+                @if(auth()->user()->id_rol == 1)
+                    <button onclick="abrirModalInversion()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm smooth-transition">
+                        <i class="fa-solid fa-plus mr-2"></i> Nuevo IOARR
+                    </button>
+                @endif
+            </div>
         </header>
 
         <div class="p-8">
@@ -151,7 +164,7 @@
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">CUI *</label>
-                        <input type="text" name="cui" id="inp_cui" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 font-bold text-blue-700">
+                        <input type="text" name="cui" id="inp_cui" inputmode="numeric" pattern="\d*" required class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-blue-500 font-bold text-blue-700">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre de la Inversión *</label>
@@ -229,10 +242,19 @@
     @endif
 
     <script>
+        // Datos completos de inversiones (incluye pim, certificado, devengado, girado)
+        // Se usan para exportar el PDF sin depender de la paginación del datatable
+        const todasInversiones = @json($inversiones);
+
         document.addEventListener("DOMContentLoaded", function() {
             new simpleDatatables.DataTable("#tabla-inversiones", {
                 searchable: true, fixedHeight: true,
                 labels: { placeholder: "Buscar CUI...", perPage: "filas por página", noRows: "No hay inversiones", info: "Mostrando {start} a {end} de {rows}" }
+            });
+
+            // Validación estricta en tiempo real para el campo CUI
+            document.getElementById('inp_cui').addEventListener('input', function (e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
             });
         });
 
@@ -240,7 +262,7 @@
             document.getElementById('form-inversion').reset();
             document.getElementById('form-inversion').action = "{{ route('inversiones.store') }}";
             document.getElementById('method-put').innerHTML = '';
-            document.getElementById('inp_tipo_ioarr').value = ''; // Limpiamos el nuevo campo
+            document.getElementById('inp_tipo_ioarr').value = ''; 
             document.getElementById('panel-financiero').classList.add('hidden');
             document.getElementById('titulo-modal').innerHTML = '<i class="fa-solid fa-folder-plus mr-2"></i> Nuevo IOARR';
             
@@ -253,7 +275,7 @@
         function editarInversion(inv) {
             document.getElementById('inp_cui').value = inv.cui;
             document.getElementById('inp_nombre').value = inv.nombre_inversion;
-            document.getElementById('inp_tipo_ioarr').value = inv.tipo_ioarr || ''; // Cargamos el nuevo campo
+            document.getElementById('inp_tipo_ioarr').value = inv.tipo_ioarr || ''; 
             document.getElementById('inp_pim').value = inv.pim || 0;
             document.getElementById('inp_cert').value = inv.certificado || 0;
             document.getElementById('inp_dev').value = inv.devengado || 0;
@@ -294,6 +316,139 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Guardando...';
             btn.classList.add('opacity-75', 'cursor-not-allowed');
+        }
+
+        // --- EXPORTAR PDF ---
+        // Se reconstruye el reporte desde los datos (todasInversiones), no desde
+        // el DOM, para evitar que la paginación del datatable corte filas y para
+        // poder incluir "Girado" (que en la tabla visible no aparece, solo en el modal).
+
+        function fechaArchivo() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        function formatoMoneda(valor) {
+            return parseFloat(valor || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function ponerBotonCargando(boton, cargando) {
+            if (cargando) {
+                boton.dataset.original = boton.innerHTML;
+                boton.disabled = true;
+                boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Generando...</span>';
+            } else {
+                boton.disabled = false;
+                boton.innerHTML = boton.dataset.original;
+            }
+        }
+
+        function exportarPDFInversiones(boton) {
+            if (!todasInversiones || todasInversiones.length === 0) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'No hay inversiones para exportar', showConfirmButton: false, timer: 3000 });
+                return;
+            }
+
+            ponerBotonCargando(boton, true);
+
+            // Construimos las filas del reporte con TODO el detalle financiero
+            let filasHTML = '';
+            todasInversiones.forEach(inv => {
+                const pim = parseFloat(inv.pim || 0);
+                const certificado = parseFloat(inv.certificado || 0);
+                const devengado = parseFloat(inv.devengado || 0);
+                const girado = parseFloat(inv.girado || 0);
+                const avance = pim > 0 ? (devengado / pim) * 100 : 0;
+
+                let colorAvance = '#ef4444';
+                if (avance > 74) colorAvance = '#10b981';
+                else if (avance > 50) colorAvance = '#facc15';
+                else if (avance > 25) colorAvance = '#f97316';
+
+                filasHTML += `
+                    <tr>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">
+                            <div style="font-weight:800;color:#1d4ed8;font-size:13px;">${inv.cui}</div>
+                            <div style="font-size:11px;color:#6b7280;font-weight:600;margin-top:2px;max-width:220px;">${inv.nombre_inversion}</div>
+                        </td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:11px;color:#4338ca;font-weight:700;">${inv.tipo_ioarr || '-'}</td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">
+                            <span style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:800;padding:3px 10px;border-radius:9999px;">${inv.fase || 'Formulación'}</span>
+                        </td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">
+                            <span style="background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:800;padding:3px 10px;border-radius:9999px;">${inv.estado_pmi || '-'}</span>
+                        </td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1e293b;">S/ ${formatoMoneda(pim)}</td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;color:#b45309;">S/ ${formatoMoneda(certificado)}</td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;color:#059669;">S/ ${formatoMoneda(devengado)}</td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;color:#7c3aed;">S/ ${formatoMoneda(girado)}</td>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:800;color:${colorAvance};">${avance.toFixed(1)}%</td>
+                    </tr>`;
+            });
+
+            // Totales generales
+            const totalPim = todasInversiones.reduce((s, i) => s + parseFloat(i.pim || 0), 0);
+            const totalCert = todasInversiones.reduce((s, i) => s + parseFloat(i.certificado || 0), 0);
+            const totalDev = todasInversiones.reduce((s, i) => s + parseFloat(i.devengado || 0), 0);
+            const totalGirado = todasInversiones.reduce((s, i) => s + parseFloat(i.girado || 0), 0);
+            const avanceGlobal = totalPim > 0 ? (totalDev / totalPim) * 100 : 0;
+
+            const fechaGeneracion = new Date().toLocaleString('es-PE');
+
+            const contenedorTemp = document.createElement('div');
+            contenedorTemp.style.cssText = 'width:1150px; background:#fff; padding:28px; font-family:Inter,sans-serif;';
+            contenedorTemp.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:3px solid #2563eb;padding-bottom:12px;">
+                    <div>
+                        <h2 style="font-size:20px;font-weight:900;color:#1e293b;margin:0;">Reporte de Inversiones (IOARR)</h2>
+                        <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Generado el ${fechaGeneracion}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;">Total Inversiones</div>
+                        <div style="font-size:22px;font-weight:900;color:#2563eb;">${todasInversiones.length}</div>
+                    </div>
+                </div>
+
+                <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="padding:10px 12px;text-align:left;color:#374151;">CUI / Nombre</th>
+                            <th style="padding:10px 12px;text-align:center;color:#374151;">Tipo</th>
+                            <th style="padding:10px 12px;text-align:center;color:#374151;">Fase</th>
+                            <th style="padding:10px 12px;text-align:center;color:#374151;">Estado</th>
+                            <th style="padding:10px 12px;text-align:right;color:#374151;">PIM</th>
+                            <th style="padding:10px 12px;text-align:right;color:#374151;">Certificado</th>
+                            <th style="padding:10px 12px;text-align:right;color:#374151;">Devengado</th>
+                            <th style="padding:10px 12px;text-align:right;color:#374151;">Girado</th>
+                            <th style="padding:10px 12px;text-align:center;color:#374151;">Avance</th>
+                        </tr>
+                    </thead>
+                    <tbody>${filasHTML}</tbody>
+                    <tfoot>
+                        <tr style="background:#eff6ff;">
+                            <td colspan="4" style="padding:12px;font-weight:900;color:#1e293b;">TOTALES</td>
+                            <td style="padding:12px;text-align:right;font-weight:900;color:#1e293b;">S/ ${formatoMoneda(totalPim)}</td>
+                            <td style="padding:12px;text-align:right;font-weight:900;color:#b45309;">S/ ${formatoMoneda(totalCert)}</td>
+                            <td style="padding:12px;text-align:right;font-weight:900;color:#059669;">S/ ${formatoMoneda(totalDev)}</td>
+                            <td style="padding:12px;text-align:right;font-weight:900;color:#7c3aed;">S/ ${formatoMoneda(totalGirado)}</td>
+                            <td style="padding:12px;text-align:center;font-weight:900;color:#1e293b;">${avanceGlobal.toFixed(1)}%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+
+            const opciones = {
+                margin: 0.4,
+                filename: `Inversiones_IOARR_${fechaArchivo()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opciones).from(contenedorTemp).save().then(() => {
+                ponerBotonCargando(boton, false);
+            });
         }
     </script>
 </body>

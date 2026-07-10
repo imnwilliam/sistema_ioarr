@@ -28,18 +28,22 @@ class UsuarioController extends Controller
     // 2. Guardar el nuevo usuario encriptado
     public function store(Request $request)
     {
-        // Validación básica
+        // Validación básica y estricta en el servidor
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'name' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/|max:255',
+            // OJO: Le quitamos la restricción "email", ahora acepta cualquier nombre de usuario único.
+            'email' => 'required|string|max:255|unique:users,email', 
             'password' => 'required|string|min:6',
             'id_rol' => 'required|integer'
+        ], [
+            'name.regex' => 'El nombre completo solo puede contener letras y espacios.'
         ]);
 
         // Creamos el usuario
         User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            // Guardamos el "Nombre de usuario" en la columna "email" para no romper el núcleo de Laravel
+            'email' => $request->email, 
             'password' => Hash::make($request->password), // ¡Seguridad!
             'id_rol' => $request->id_rol,
         ]);

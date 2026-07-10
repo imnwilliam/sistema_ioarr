@@ -21,11 +21,18 @@ class InversionController extends Controller
 
     public function store(Request $request)
     {
+        // Validación estricta en el servidor para evitar letras o símbolos
+        $request->validate([
+            'cui' => 'required|numeric', 
+            'nombre_inversion' => 'required',
+            'tipo_ioarr' => 'required'
+        ]);
+
         // 1. Guardamos la Inversión incluyendo el nuevo Tipo de IOARR
         $id_inversion = DB::table('inversiones')->insertGetId([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
-            'tipo_ioarr' => $request->tipo_ioarr, // <-- NUEVO CAMPO
+            'tipo_ioarr' => $request->tipo_ioarr,
             'estado_pmi' => 'Activo',
             'fase' => $request->fase ?? 'Formulación'
         ]);
@@ -44,11 +51,18 @@ class InversionController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Validación estricta en el servidor para evitar letras o símbolos
+        $request->validate([
+            'cui' => 'required|numeric',
+            'nombre_inversion' => 'required',
+            'tipo_ioarr' => 'required'
+        ]);
+
         // 1. Actualizamos datos básicos y el Tipo de IOARR
         DB::table('inversiones')->where('id', $id)->update([
             'cui' => $request->cui,
             'nombre_inversion' => $request->nombre_inversion,
-            'tipo_ioarr' => $request->tipo_ioarr, // <-- NUEVO CAMPO
+            'tipo_ioarr' => $request->tipo_ioarr,
             'estado_pmi' => $request->estado_pmi,
             'fase' => $request->fase
         ]);
