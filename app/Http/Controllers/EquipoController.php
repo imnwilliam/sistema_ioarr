@@ -37,7 +37,12 @@ class EquipoController extends Controller
 
         $equipos = $query->orderBy('equipos.id', 'desc')->get();
 
-        $inversiones = DB::table('inversiones')->where('estado_pmi', 'Activo')->get();
+        // --- FIX: excluir inversiones (IOARR) eliminadas (soft delete) del selector ---
+        $inversiones = DB::table('inversiones')
+            ->where('estado_pmi', 'Activo')
+            ->whereNull('deleted_at')
+            ->get();
+
         $areas = DB::table('areas_upss')->get();
         $tipos = DB::table('tipos_equipo')->get();
 
