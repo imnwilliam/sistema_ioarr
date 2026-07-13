@@ -32,9 +32,19 @@ class InversionController extends Controller
                 Rule::unique('inversiones', 'cui')->whereNull('deleted_at'),
             ],
             'nombre_inversion' => 'required',
-            'tipo_ioarr' => 'required'
+            'tipo_ioarr' => 'required',
+            // Los montos financieros nunca deben ser negativos: rompen los
+            // porcentajes de avance y el ancho de las barras de progreso.
+            'pim' => 'nullable|numeric|min:0',
+            'certificado' => 'nullable|numeric|min:0',
+            'devengado' => 'nullable|numeric|min:0',
+            'girado' => 'nullable|numeric|min:0',
         ], [
             'cui.unique' => 'Ya existe un IOARR activo registrado con este CUI.',
+            'pim.min' => 'El PIM no puede ser un valor negativo.',
+            'certificado.min' => 'El monto certificado no puede ser negativo.',
+            'devengado.min' => 'El monto devengado no puede ser negativo.',
+            'girado.min' => 'El monto girado no puede ser negativo.',
         ]);
 
         try {
@@ -75,9 +85,17 @@ class InversionController extends Controller
                 Rule::unique('inversiones', 'cui')->whereNull('deleted_at')->ignore($id),
             ],
             'nombre_inversion' => 'required',
-            'tipo_ioarr' => 'required'
+            'tipo_ioarr' => 'required',
+            'pim' => 'nullable|numeric|min:0',
+            'certificado' => 'nullable|numeric|min:0',
+            'devengado' => 'nullable|numeric|min:0',
+            'girado' => 'nullable|numeric|min:0',
         ], [
             'cui.unique' => 'Ya existe otro IOARR activo registrado con este CUI.',
+            'pim.min' => 'El PIM no puede ser un valor negativo.',
+            'certificado.min' => 'El monto certificado no puede ser negativo.',
+            'devengado.min' => 'El monto devengado no puede ser negativo.',
+            'girado.min' => 'El monto girado no puede ser negativo.',
         ]);
 
         try {

@@ -65,6 +65,24 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+
+        /* Toggle de filtro por Estado PMI */
+        .filtro-estado-btn {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 0.4rem 0.9rem;
+            border-radius: 0.6rem;
+            color: #64748b;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .filtro-estado-btn:hover { color: #1e293b; }
+        .filtro-estado-btn.activo {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 6px -1px rgba(37,99,235,0.4);
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -73,7 +91,7 @@
 
     <main class="flex-1 flex flex-col overflow-y-auto">
         
-        <header class="bg-white border-b border-gray-200 px-8 py-5 sticky top-0 z-40 shadow-sm flex justify-between items-center">
+        <header class="bg-white border-b border-gray-200 px-8 py-5 sticky top-0 z-40 shadow-sm flex justify-between items-center flex-wrap gap-3">
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight flex items-center">
                     <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center mr-3 shadow-md shadow-blue-500/30 text-sm">
@@ -87,7 +105,14 @@
                 $ultimaMod = \Illuminate\Support\Facades\Cache::get('ultima_modificacion');
             @endphp
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 flex-wrap">
+
+                <div class="flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-xl p-1 shadow-sm">
+                    <a href="{{ request()->fullUrlWithQuery(['estado' => 'todos']) }}" class="filtro-estado-btn {{ $filtroEstado === 'todos' ? 'activo' : '' }}">Todos</a>
+                    <a href="{{ request()->fullUrlWithQuery(['estado' => 'activos']) }}" class="filtro-estado-btn {{ $filtroEstado === 'activos' ? 'activo' : '' }}">Solo Activos</a>
+                    <a href="{{ request()->fullUrlWithQuery(['estado' => 'cerrados']) }}" class="filtro-estado-btn {{ $filtroEstado === 'cerrados' ? 'activo' : '' }}">Solo Cerrados</a>
+                </div>
+
                 <button onclick="exportarPDFGeneral(this)" 
                     class="btn-exportar flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-md shadow-red-500/30 transition-all">
                     <i class="fa-solid fa-file-pdf"></i>
@@ -116,6 +141,17 @@
         </header>
 
         <div class="p-8 space-y-8" id="contenido-dashboard">
+
+            <div class="text-xs font-bold text-slate-500 -mt-4 flex items-center gap-2">
+                <i class="fa-solid fa-filter text-blue-500"></i>
+                Mostrando:
+                <span class="text-blue-700">
+                    @if($filtroEstado === 'activos') Solo proyectos Activos
+                    @elseif($filtroEstado === 'cerrados') Solo proyectos Cerrados / Liquidados
+                    @else Todos los proyectos (Activos y Cerrados)
+                    @endif
+                </span>
+            </div>
             
             @php
                 $totalPim = $financiera->total_pim ?? 0;
@@ -227,6 +263,10 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h3 id="titulo-chart-areas" class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-chart-donut text-purple-500 mr-2"></i> Distribución Global por Áreas</h3>
                     <div id="chart-areas" class="mt-4"></div>
+                    <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                        <p class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Total de Equipos</p>
+                        <h4 id="total-areas-valor" class="text-2xl font-black text-slate-800">0</h4>
+                    </div>
                 </div>
             </div>
 
@@ -356,6 +396,13 @@ function renderChart() {
         const optionsInv = {
             chart: { 
                 type: 'bar', height: 350, fontFamily: 'Inter, sans-serif', toolbar: { show: false },
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 600,
+                    animateGradually: { enabled: true, delay: 100 },
+                    dynamicAnimation: { enabled: true, speed: 350 }
+                },
                 events: {
                     dataPointSelection: function(event, chartContext, config) {
                         const seleccionados = config.selectedDataPoints[0];
@@ -370,6 +417,7 @@ function renderChart() {
             },
             series: [{ name: 'Monto Equipamiento (S/)', data: invMontos }],
             xaxis: { categories: invLabels, title: { text: 'Códigos CUI (IOARR)', style: { fontWeight: 600, color: '#64748b' } } },
+            yaxis: { min: 0 },
             colors: ['#3b82f6'],
             plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '40%', dataLabels: { position: 'top' } } },
             dataLabels: { 
@@ -386,8 +434,13 @@ function renderChart() {
         chartInversionesObj = new ApexCharts(document.querySelector("#chart-inversiones"), optionsInv);
         chartInversionesObj.render();
     } else {
-        chartInversionesObj.updateOptions({ xaxis: { categories: invLabels } });
-        chartInversionesObj.updateSeries([{ data: invMontos }]);
+        // Actualización atómica: categorías y serie juntas en una sola llamada
+        // para que las etiquetas del eje X queden siempre alineadas con su barra
+        // correspondiente, incluso al paginar rápido.
+        chartInversionesObj.updateOptions({
+            series: [{ data: invMontos }],
+            xaxis: { categories: invLabels }
+        }, true, true);
     }
     updateChartControls();
 }
@@ -422,14 +475,28 @@ const optionsAreas = {
         formatter: function (val) { return val.toFixed(1) + "%"; },
         dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 }
     },
-        legend: { position: 'bottom', markers: { radius: 12 } }
-    };
-    chartAreasObj = new ApexCharts(document.querySelector("#chart-areas"), optionsAreas);
-    chartAreasObj.render();
+    legend: { 
+        position: 'bottom', 
+        markers: { radius: 12 },
+        formatter: function(seriesName, opts) {
+            const val = opts.w.globals.series[opts.seriesIndex];
+            return seriesName + ': <strong>' + val + '</strong>';
+        }
+    }
+};
+chartAreasObj = new ApexCharts(document.querySelector("#chart-areas"), optionsAreas);
+chartAreasObj.render();
+
+// Actualiza el subtítulo con el total general (suma de todos los valores del donut)
+function actualizarTotalAreas(valores) {
+    const total = valores.reduce((a, b) => a + b, 0);
+    document.getElementById('total-areas-valor').innerText = total;
+}
+actualizarTotalAreas(areasDatos.map(a => a.cantidad));
 
 
-    // --- 4. LÓGICA DEL DRILL-DOWN (AJAX) ---
-    function cargarDetalleEquipos(idInversion, cui) {
+// --- 4. LÓGICA DEL DRILL-DOWN (AJAX) ---
+function cargarDetalleEquipos(idInversion, cui) {
     document.getElementById('lbl-cui').innerText = cui;
     document.getElementById('panel-detalle').classList.remove('hidden');
     
@@ -494,10 +561,12 @@ const optionsAreas = {
             if(Object.keys(conteoAreasCUI).length > 0) {
                 chartAreasObj.updateOptions({ labels: Object.keys(conteoAreasCUI) });
                 chartAreasObj.updateSeries(Object.values(conteoAreasCUI));
+                actualizarTotalAreas(Object.values(conteoAreasCUI));
                 document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-filter text-purple-500 mr-2"></i> Áreas del CUI: ${cui}`;
             } else {
                 chartAreasObj.updateOptions({ labels: ['Sin Equipos'] });
                 chartAreasObj.updateSeries([1]); 
+                actualizarTotalAreas([0]);
             }
             });
         }
@@ -506,6 +575,7 @@ const optionsAreas = {
     document.getElementById('panel-detalle').classList.add('hidden');
     chartAreasObj.updateOptions({ labels: areasDatos.map(a => a.nombre_upss) });
     chartAreasObj.updateSeries(areasDatos.map(a => a.cantidad));
+    actualizarTotalAreas(areasDatos.map(a => a.cantidad));
     document.getElementById('titulo-chart-areas').innerHTML = `<i class="fa-solid fa-chart-donut text-purple-500 mr-2"></i> Distribución Global por Áreas`;
     }
 
@@ -589,11 +659,17 @@ const optionsAreas = {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); z-index:99999; display:flex; justify-content:center; align-items:flex-start; overflow:auto; padding:40px;';
 
+    const totalAreasDetalle = Object.values(conteoAreasCUI).reduce((a, b) => a + b, 0);
+
     const reporte = document.createElement('div');
     reporte.style.cssText = 'width:1000px; max-width:100%; background:#fff; padding:28px; border-radius:12px; font-family:Inter,sans-serif;';
     reporte.innerHTML = `
         <h2 style="font-size:20px;font-weight:900;margin-bottom:16px;color:#1e293b;">Detalle de Inversión - ${ultimoCuiDetalle}</h2>
-        <div id="pdf-chart-areas" style="margin-bottom:24px;border:1px solid #f1f5f9;border-radius:12px;padding:16px;"></div>
+        <div id="pdf-chart-areas" style="margin-bottom:8px;border:1px solid #f1f5f9;border-radius:12px;padding:16px;"></div>
+        <div style="text-align:center;margin-bottom:24px;padding-top:12px;border-top:1px solid #f1f5f9;">
+            <p style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Total de Equipos</p>
+            <h4 style="font-size:20px;font-weight:900;color:#1e293b;">${totalAreasDetalle}</h4>
+        </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
                 <tr style="background:#f9fafb;">
@@ -618,7 +694,13 @@ const optionsAreas = {
         colors: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
         plotOptions: { pie: { donut: { size: '65%' } } },
         dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + '%' },
-        legend: { position: 'bottom' }
+        legend: { 
+            position: 'bottom',
+            formatter: function(seriesName, opts) {
+                const val = opts.w.globals.series[opts.seriesIndex];
+                return seriesName + ': <strong>' + val + '</strong>';
+            }
+        }
     });
 
     chartExport.render().then(() => {

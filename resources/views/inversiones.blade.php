@@ -188,19 +188,19 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-600 mb-1 uppercase">PIM</label>
-                            <input type="number" name="pim" id="inp_pim" step="0.01" class="w-full border border-gray-300 rounded-lg p-2 outline-none focus:border-blue-500 font-bold">
+                            <input type="number" name="pim" id="inp_pim" step="0.01" min="0" class="no-negativos w-full border border-gray-300 rounded-lg p-2 outline-none focus:border-blue-500 font-bold">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-amber-600 mb-1 uppercase">Certificado</label>
-                            <input type="number" name="certificado" id="inp_cert" step="0.01" class="w-full border border-amber-300 rounded-lg p-2 outline-none focus:border-amber-500">
+                            <input type="number" name="certificado" id="inp_cert" step="0.01" min="0" class="no-negativos w-full border border-amber-300 rounded-lg p-2 outline-none focus:border-amber-500">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-emerald-600 mb-1 uppercase">Devengado</label>
-                            <input type="number" name="devengado" id="inp_dev" step="0.01" class="w-full border border-emerald-300 rounded-lg p-2 outline-none focus:border-emerald-500">
+                            <input type="number" name="devengado" id="inp_dev" step="0.01" min="0" class="no-negativos w-full border border-emerald-300 rounded-lg p-2 outline-none focus:border-emerald-500">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-purple-600 mb-1 uppercase">Girado</label>
-                            <input type="number" name="girado" id="inp_girado" step="0.01" class="w-full border border-purple-300 rounded-lg p-2 outline-none focus:border-purple-500">
+                            <input type="number" name="girado" id="inp_girado" step="0.01" min="0" class="no-negativos w-full border border-purple-300 rounded-lg p-2 outline-none focus:border-purple-500">
                         </div>
                         
                         <div class="col-span-2 mt-2 grid grid-cols-2 gap-4">
@@ -276,6 +276,31 @@
             // Validación estricta en tiempo real para el campo CUI
             document.getElementById('inp_cui').addEventListener('input', function (e) {
                 this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            // --- Bloqueo de valores negativos en montos financieros (PIM, Certificado, Devengado, Girado) ---
+            // 1) Evitamos que se puedan siquiera escribir los signos "-", "+" o la "e" (notación científica)
+            // 2) Como red de seguridad extra, si el navegador permite pegar un negativo, lo limpiamos al vuelo
+            document.querySelectorAll('.no-negativos').forEach(function (input) {
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                    }
+                });
+                input.addEventListener('input', function () {
+                    if (this.value.includes('-')) {
+                        this.value = this.value.replace(/-/g, '');
+                    }
+                    if (parseFloat(this.value) < 0) {
+                        this.value = 0;
+                    }
+                });
+                input.addEventListener('paste', function (e) {
+                    const texto = (e.clipboardData || window.clipboardData).getData('text');
+                    if (texto.includes('-')) {
+                        e.preventDefault();
+                    }
+                });
             });
         });
 
