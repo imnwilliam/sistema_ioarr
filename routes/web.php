@@ -77,6 +77,10 @@ Route::middleware(['auth'])->group(function () {
         // USUARIOS
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
         Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+        Route::put('/usuarios/{id}', [UsuarioController::class, 'update'])->name('usuarios.update');
+        Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
+        Route::put('/usuarios/{id}/activar', [UsuarioController::class, 'activar'])->name('usuarios.activar');
+        Route::put('/usuarios/{id}/reset-password', [UsuarioController::class, 'resetPassword'])->name('usuarios.reset-password');
 
         // PERFILES Y ROLES
         Route::get('/roles', [RolController::class, 'index'])->name('roles.index');

@@ -12,7 +12,6 @@ class RolController extends Controller
         $opciones = DB::table('opciones')->orderBy('orden')->get();
         $roles = DB::table('roles')->where('estado', 1)->get();
 
-        // Mapeamos los permisos actuales de cada rol para enviarlos por JSON a la vista
         foreach ($roles as $rol) {
             $rol->permisos = DB::table('permisos')->where('id_rol', $rol->id)->get()->keyBy('id_opcion');
         }
@@ -22,48 +21,62 @@ class RolController extends Controller
 
     public function store(Request $request)
     {
-        // Validación estricta en el backend: Solo letras y espacios.
         $request->validate([
-            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
+            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/|unique:roles,nombre_rol',
+            'permisos' => 'required|array|min:1',
         ], [
-            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.'
+            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.',
+            'nombre_rol.unique' => 'Ya existe un perfil con ese nombre.',
+            'permisos.required' => 'Debes asignar al menos un módulo a este perfil.',
+            'permisos.min' => 'Debes asignar al menos un módulo a este perfil.',
         ]);
 
-        $id_rol = DB::table('roles')->insertGetId([
-            'nombre_rol' => $request->nombre_rol,
-            'descripcion' => $request->descripcion,
-            'estado' => 1
-        ]);
+        $this->validarOpcionesExisten($request->permisos);
 
-        $this->sincronizarPermisos($id_rol, $request->permisos);
+        DB::transaction(function () use ($request) {
+            $id_rol = DB::table('roles')->insertGetId([
+                'nombre_rol' => $request->nombre_rol,
+                'descripcion' => $request->descripcion,
+                'estado' => 1
+            ]);
+
+            $this->sincronizarPermisos($id_rol, $request->permisos);
+        });
 
         return redirect('/roles')->with('success', 'Perfil y permisos creados correctamente.');
     }
 
     public function update(Request $request, $id)
     {
-        // Validación estricta en el backend para la edición.
         $request->validate([
-            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
+            'nombre_rol' => 'required|string|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/|unique:roles,nombre_rol,' . $id,
+            'permisos' => 'required|array|min:1',
         ], [
-            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.'
+            'nombre_rol.regex' => 'El nombre del rol solo puede contener letras y espacios.',
+            'nombre_rol.unique' => 'Ya existe un perfil con ese nombre.',
+            'permisos.required' => 'Debes asignar al menos un módulo a este perfil.',
+            'permisos.min' => 'Debes asignar al menos un módulo a este perfil.',
         ]);
 
-        DB::table('roles')->where('id', $id)->update([
-            'nombre_rol' => $request->nombre_rol,
-            'descripcion' => $request->descripcion
-        ]);
+        $this->validarOpcionesExisten($request->permisos);
 
-        // Borramos los permisos antiguos para insertar los nuevos limpiamente
-        DB::table('permisos')->where('id_rol', $id)->delete();
-        $this->sincronizarPermisos($id, $request->permisos);
+        DB::transaction(function () use ($request, $id) {
+            DB::table('roles')->where('id', $id)->update([
+                'nombre_rol' => $request->nombre_rol,
+                'descripcion' => $request->descripcion
+            ]);
+
+            // Borramos e insertamos dentro de la misma transacción:
+            // si algo falla, se revierte todo y el rol no se queda sin permisos.
+            DB::table('permisos')->where('id_rol', $id)->delete();
+            $this->sincronizarPermisos($id, $request->permisos);
+        });
 
         return redirect('/roles')->with('success', 'Perfil actualizado correctamente.');
     }
 
     public function destroy($id)
     {
-        // No borramos al admin principal por seguridad
         if ($id == 1) {
             return redirect('/roles')->with('error', 'No puedes eliminar al Administrador Principal.');
         }
@@ -72,13 +85,23 @@ class RolController extends Controller
         return redirect('/roles')->with('success', 'Perfil eliminado correctamente.');
     }
 
-    // Función interna para recorrer los checkboxes y guardarlos en BD
+    // Valida que cada id_opcion enviado exista realmente en la tabla 'opciones'
+    private function validarOpcionesExisten($permisos)
+    {
+        $idsValidos = DB::table('opciones')->pluck('id')->map(fn($id) => (int)$id)->toArray();
+
+        foreach (array_keys($permisos) as $id_opcion) {
+            if (!in_array((int) $id_opcion, $idsValidos)) {
+                abort(422, 'Uno de los módulos seleccionados no existe.');
+            }
+        }
+    }
+
     private function sincronizarPermisos($id_rol, $permisos)
     {
         if (!empty($permisos)) {
             $inserts = [];
             foreach ($permisos as $id_opcion => $valores) {
-                // Si marcó Lector O Editor, le damos el acceso a ese módulo
                 if (isset($valores['lector']) || isset($valores['editor'])) {
                     $inserts[] = [
                         'id_rol' => $id_rol,
