@@ -244,7 +244,7 @@
                                                     elseif(in_array($ext, ['xls','xlsx'])) $icon = 'fa-file-excel text-green-500';
                                                     elseif(in_array($ext, ['doc','docx'])) $icon = 'fa-file-word text-blue-500';
                                                 @endphp
-                                                <a href="{{ asset('storage/'.$ruta) }}" target="_blank" class="text-blue-600 hover:bg-blue-100 px-2 py-1 rounded smooth-transition text-xs font-semibold whitespace-nowrap" title="Ver Documento">
+                                                <a href="{{ route('equipos.evidencia', [$eq->id, $idx]) }}" target="_blank" rel="noopener" class="text-blue-600 hover:bg-blue-100 px-2 py-1 rounded smooth-transition text-xs font-semibold whitespace-nowrap" title="Ver Documento">
                                                     <i class="fa-solid {{ $icon }} mr-1"></i> Doc {{ $idx + 1 }}
                                                 </a>
                                             @endforeach

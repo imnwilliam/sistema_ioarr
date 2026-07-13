@@ -52,6 +52,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/equipos', [EquipoController::class, 'store'])->name('equipos.store');
     Route::get('/equipos/exportar', [EquipoController::class, 'exportarCSV'])->name('equipos.exportar');
     Route::get('/equipos/descargar/{id}', [EquipoController::class, 'descargarPDF'])->name('equipos.descargar');
+    Route::get('/equipos/{id}/evidencia/{index}', [EquipoController::class, 'verEvidencia'])->name('equipos.evidencia');
     Route::put('/equipos/{id}', [EquipoController::class, 'update'])->name('equipos.update');
     Route::delete('/equipos/{id}', [EquipoController::class, 'destroy'])->name('equipos.destroy');
     Route::delete('/equipos/{id}/archivo/{index}', [EquipoController::class, 'destroyArchivo']);

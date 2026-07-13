@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Equipo;
+use App\Support\Almacenamiento;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\EquiposExport;
 
@@ -36,7 +36,7 @@ class EquipoController extends Controller
         $sumaTotal = $query->sum('equipos.precio_total');
 
         $equipos = $query->orderBy('equipos.id', 'desc')->get();
-        
+
         $inversiones = DB::table('inversiones')->where('estado_pmi', 'Activo')->get();
         $areas = DB::table('areas_upss')->get();
         $tipos = DB::table('tipos_equipo')->get();
@@ -91,21 +91,22 @@ class EquipoController extends Controller
         $equipo->expediente = $request->expediente;
         $equipo->nombre_equipo = $request->nombre_equipo;
         $equipo->tipo_equipo = $request->tipo_equipo;
-        $equipo->servicio = $request->servicio; 
+        $equipo->servicio = $request->servicio;
         $equipo->ambiente = $request->ambiente;
         $equipo->estado_situacional = $request->estado_situacional;
         $equipo->cantidad = $request->cantidad;
         $equipo->precio_unitario = $request->precio_unitario;
         $equipo->precio_total = $request->cantidad * $request->precio_unitario;
-        
+
+        // --- SUBIDA A BACKBLAZE B2 (antes: $file->store('evidencias', 'public')) ---
         $archivos = [];
         if ($request->hasFile('archivos_evidencia')) {
             foreach ($request->file('archivos_evidencia') as $file) {
-                $archivos[] = $file->store('evidencias', 'public');
+                $archivos[] = Almacenamiento::subir($file);
             }
         }
         $equipo->archivo_evidencia = json_encode($archivos);
-        
+
         $equipo->save();
 
         return redirect('/equipos')->with('success', 'Equipo y evidencias registrados correctamente.');
@@ -116,16 +117,17 @@ class EquipoController extends Controller
         $request->validate($this->reglasValidacion(), $this->mensajesValidacion());
 
         $equipoExistente = DB::table('equipos')->where('id', $id)->first();
-        
+
         $archivosExistentes = json_decode($equipoExistente->archivo_evidencia, true);
         if (!$archivosExistentes && !empty($equipoExistente->archivo_evidencia)) {
             $archivosExistentes = [$equipoExistente->archivo_evidencia];
         }
         $archivosExistentes = $archivosExistentes ?? [];
 
+        // --- SUBIDA A BACKBLAZE B2 (antes: $file->store('evidencias', 'public')) ---
         if ($request->hasFile('archivos_evidencia')) {
             foreach ($request->file('archivos_evidencia') as $file) {
-                $archivosExistentes[] = $file->store('evidencias', 'public');
+                $archivosExistentes[] = Almacenamiento::subir($file);
             }
         }
 
@@ -135,7 +137,7 @@ class EquipoController extends Controller
             'expediente' => $request->expediente,
             'nombre_equipo' => $request->nombre_equipo,
             'tipo_equipo' => $request->tipo_equipo,
-            'servicio' => $request->servicio, 
+            'servicio' => $request->servicio,
             'ambiente' => $request->ambiente,
             'estado_situacional' => $request->estado_situacional,
             'cantidad' => $request->cantidad,
@@ -154,11 +156,12 @@ class EquipoController extends Controller
         $equipo = DB::table('equipos')->where('id', $id)->first();
         $archivos = json_decode($equipo->archivo_evidencia, true) ?? [];
 
-        if(isset($archivos[$index])) {
-            Storage::disk('public')->delete($archivos[$index]); 
-            unset($archivos[$index]); 
-            $archivos = array_values($archivos); 
-            
+        if (isset($archivos[$index])) {
+            // --- BORRADO EN BACKBLAZE B2 (antes: Storage::disk('public')->delete()) ---
+            Almacenamiento::eliminar($archivos[$index]);
+            unset($archivos[$index]);
+            $archivos = array_values($archivos);
+
             DB::table('equipos')->where('id', $id)->update(['archivo_evidencia' => json_encode($archivos)]);
         }
 
@@ -171,23 +174,30 @@ class EquipoController extends Controller
         return redirect('/equipos')->with('success', 'Equipo eliminado del sistema.');
     }
 
-    public function descargarPDF($id)
+    /**
+     * Genera una URL firmada temporal para ver/descargar UNA evidencia puntual
+     * (identificada por su índice dentro del array) y redirige a ella.
+     * El bucket es privado: nunca se expone la URL real del objeto en el HTML,
+     * solo se genera al momento en que el usuario hace clic.
+     */
+    public function verEvidencia($id, $index)
     {
-        $equipo = DB::table('equipos')->where('id', $id)->first();
-        
-        if ($equipo && $equipo->archivo_evidencia && Storage::disk('local')->exists($equipo->archivo_evidencia)) {
-            return Storage::disk('local')->download($equipo->archivo_evidencia);
-        }
+        $equipo = DB::table('equipos')->where('id', $id)->whereNull('deleted_at')->first();
+        abort_if(!$equipo, 404);
 
-        return back()->with('error', 'El archivo no se encuentra disponible.');
+        $archivos = json_decode($equipo->archivo_evidencia, true) ?? [];
+        abort_if(!isset($archivos[$index]), 404);
+
+        $url = Almacenamiento::urlTemporal($archivos[$index]);
+        abort_if(!$url, 404, 'El archivo ya no está disponible en el almacenamiento.');
+
+        return redirect()->away($url);
     }
 
     public function exportarCSV(Request $request)
     {
-        // Generamos el nombre del archivo dinámicamente con la extensión .xlsx
         $filename = "Reporte_Equipos_IOARR_" . date('Y-m-d_H-i') . ".xlsx";
-        
-        // Retornamos la descarga del Excel usando nuestra nueva clase de Diseño
+
         return Excel::download(new EquiposExport($request), $filename);
     }
 }

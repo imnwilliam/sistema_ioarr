@@ -152,7 +152,7 @@
 
                 listaArchivos.innerHTML += `
                     <li class="flex justify-between items-center bg-white border border-gray-200 p-2 rounded-lg text-sm shadow-sm" id="file-row-${index}">
-                        <a href="/storage/${ruta}" target="_blank" class="text-blue-600 hover:underline truncate w-40 flex items-center">
+                        <a href="/equipos/${equipo.id}/evidencia/${index}" target="_blank" class="text-blue-600 hover:underline truncate w-40 flex items-center">
                             <i class="fa-solid ${icon} mr-2"></i> Doc ${index + 1}
                         </a>
                         <button type="button" onclick="eliminarArchivoUnico(${equipo.id}, ${index})" class="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="Borrar este archivo">
