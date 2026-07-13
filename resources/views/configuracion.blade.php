@@ -196,7 +196,7 @@
         function confirmarBorrado(button) {
             Swal.fire({
                 title: '¿Retirar de los catálogos?', text: "Si está en uso, la base de datos protegerá el registro automáticamente.", icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280', confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar'
+                showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280', confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar', heightAuto: false
             }).then((res) => { if (res.isConfirmed) { button.closest('form').submit(); } });
         }
     </script>

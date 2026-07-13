@@ -175,7 +175,8 @@
         Swal.fire({
             title: '¿Eliminar este documento?', text: "Esta acción no se puede deshacer.", icon: 'warning',
             showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Sí, eliminar'
+            confirmButtonText: 'Sí, eliminar',
+            heightAuto: false
         }).then((result) => {
             if (result.isConfirmed) {
                 fetch(`/equipos/${equipoId}/archivo/${index}`, {
@@ -210,7 +211,8 @@
         Swal.fire({
             title: '¿Eliminar equipo?', text: "Esta acción lo ocultará del sistema.", icon: 'warning',
             showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar'
+            confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar',
+            heightAuto: false
         }).then((result) => {
             if (result.isConfirmed) btn.closest('form').submit();
         });

@@ -27,13 +27,18 @@ class DashboardController extends Controller
             ->having('cantidad', '>', 0) // Solo áreas que tengan equipos
             ->get();
 
-        // 3. Gráfico 3: Ejecución Financiera Consolidada
+        // --- FIX: Ejecución Financiera Consolidada ---
+        // Antes sumaba directo de "financiera" sin filtrar inversiones eliminadas (soft delete),
+        // por lo que las cards seguían mostrando montos de IOARR ya "borrados".
+        // Ahora se une con "inversiones" y se excluyen las que tienen deleted_at.
         $financiera = DB::table('financiera')
+            ->join('inversiones', 'financiera.id_inversion', '=', 'inversiones.id')
+            ->whereNull('inversiones.deleted_at')
             ->select(
-                DB::raw('SUM(pim) as total_pim'),
-                DB::raw('SUM(certificado) as total_certificado'),
-                DB::raw('SUM(devengado) as total_devengado'),
-                DB::raw('SUM(girado) as total_girado')
+                DB::raw('COALESCE(SUM(financiera.pim), 0) as total_pim'),
+                DB::raw('COALESCE(SUM(financiera.certificado), 0) as total_certificado'),
+                DB::raw('COALESCE(SUM(financiera.devengado), 0) as total_devengado'),
+                DB::raw('COALESCE(SUM(financiera.girado), 0) as total_girado')
             )->first();
 
         // 4. Tabla de Ejecución Financiera Desglosada

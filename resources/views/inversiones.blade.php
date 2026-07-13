@@ -235,10 +235,31 @@
     </div>
 
     @if(session('success'))
-        <script>Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: "{{ session('success') }}", showConfirmButton: false, timer: 4000, timerProgressBar: true });</script>
+        <script>Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: "{{ session('success') }}", showConfirmButton: false, timer: 4000, timerProgressBar: true, heightAuto: false });</script>
     @endif
     @if(session('error'))
-        <script>Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: "{{ session('error') }}", showConfirmButton: false, timer: 5000, timerProgressBar: true });</script>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo completar la acción',
+                text: "{{ session('error') }}",
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Entendido',
+                heightAuto: false
+            });
+        </script>
+    @endif
+    @if($errors->any())
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Revisa el formulario',
+                html: `{!! implode('<br>', $errors->all()) !!}`,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Entendido',
+                heightAuto: false
+            });
+        </script>
     @endif
 
     <script>
@@ -305,7 +326,8 @@
             Swal.fire({
                 title: '¿Eliminar proyecto?', text: "Se ocultará del panel principal.", icon: 'warning',
                 showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
-                confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar', cancelButtonText: 'Cancelar'
+                confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar', cancelButtonText: 'Cancelar',
+                heightAuto: false
             }).then((result) => {
                 if (result.isConfirmed) { btn.closest('form').submit(); }
             })
@@ -345,7 +367,7 @@
 
         function exportarPDFInversiones(boton) {
             if (!todasInversiones || todasInversiones.length === 0) {
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'No hay inversiones para exportar', showConfirmButton: false, timer: 3000 });
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'No hay inversiones para exportar', showConfirmButton: false, timer: 3000, heightAuto: false });
                 return;
             }
 

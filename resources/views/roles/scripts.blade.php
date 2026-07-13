@@ -88,7 +88,7 @@
         Swal.fire({
             title: '¿Eliminar este perfil?', text: "Los usuarios con este rol perderán sus accesos.", icon: 'warning',
             showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar'
+            confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar', hightAuto: false
         }).then((result) => {
             if (result.isConfirmed) btn.closest('form').submit();
         });
